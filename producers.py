@@ -68,7 +68,7 @@ class LiveNetworkCapture(Process):
             self.__ieee80211_frame_offset__ = 0
         elif datalink == DLT_IEEE802_11_RADIO:
             while True:
-                header, frame = self.__pd__.next()
+                _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
                     self.__ieee80211_frame_offset__ = radiotap.get_length(frame)
                     break
@@ -82,7 +82,7 @@ class LiveNetworkCapture(Process):
         into the frame queue.
         """
         while not self.__stop__:
-            header, frame = self.__pd__.next()
+            _, frame = self.__pd__.next()  # Ignore metadata header
             if frame:
                 buff = frame[self.__ieee80211_frame_offset__:]
                 self.__frames_queue__.put(buff)
@@ -128,12 +128,12 @@ class OfflineNetworkCapture(Process):
             self.__ieee80211_frame_offset__ = 0
         elif datalink == DLT_IEEE802_11_RADIO:
             while True:
-                header, frame = self.__pd__.next()
+                _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
                     self.__ieee80211_frame_offset__ = radiotap.get_length(frame)
                     break
         else:
-            msg = "%s is not a wireless interface." % self.__network_interface__
+            msg = "%s is not a wireless interface." % self.__pcap_filename__
             raise ValueError(msg)
 
     def run(self):
@@ -142,7 +142,7 @@ class OfflineNetworkCapture(Process):
         into the frame queue.
         """
         while not self.__stop__:
-            header, frame = self.__pd__.next()
+            _, frame = self.__pd__.next()  # Ignore metadata header
             if frame:
                 buff = frame[self.__ieee80211_frame_offset__:]
                 self.__frames_queue__.put(buff)
