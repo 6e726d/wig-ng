@@ -21,6 +21,11 @@
 import os
 import argparse
 
+from multiprocessing import Queue
+
+import consumers
+import producers
+
 from helpers.network import interfaces
 
 import pcapy
@@ -61,6 +66,36 @@ def check_input_pcap_capture_files(files_list):
             raise Exception("PCAP Capture File Error.")
 
 
+def doit_pcap_files(files_list):
+
+    try:
+        fq = Queue()
+
+        producers_list = list()
+        for file in files_list:
+            producer = producers.OfflineNetworkCapture(file, fq)
+            print("Starting producer %s - %s" % (producer, file))
+            producers_list.append(producer)
+            producer.start()
+
+        consumer = consumers.ConsumerProofOfConcept(fq)
+        consumer.start()
+
+        for producer in producers_list:
+            print("Waiting for producer %s..." % producer)
+            producer.join()
+
+        consumer.shutdown()
+    except KeyboardInterrupt:
+        print("Caugth Ctrl+C...")
+        # Force shutdown and terminate on all producers and consumers.
+        for p in producers_list:
+            p.shutdown()
+            p.terminate()
+        consumer.shutdown()
+        consumer.terminate()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=DESCRIPTION)
     group = parser.add_mutually_exclusive_group(required=True)
@@ -79,3 +114,4 @@ if __name__ == "__main__":
 
     if args.r:
         check_input_pcap_capture_files(args.r)
+        doit_pcap_files(args.r)
