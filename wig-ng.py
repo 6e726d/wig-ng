@@ -86,14 +86,45 @@ def doit_pcap_files(files_list):
             producer.join()
 
         consumer.shutdown()
+        consumer.join()
     except KeyboardInterrupt:
         print("Caugth Ctrl+C...")
-        # Force shutdown and terminate on all producers and consumers.
+        # Graceful shutdown on all producers and consumers.
         for p in producers_list:
             p.shutdown()
-            p.terminate()
+            producer.join()
         consumer.shutdown()
-        consumer.terminate()
+        consumer.join()
+
+
+def doit_live_capture(interfaces_list):
+
+    try:
+        fq = Queue()
+
+        producers_list = list()
+        for interface in interfaces_list:
+            producer = producers.LiveNetworkCapture(interface, fq)
+            print("Starting producer %s - %s" % (producer, interface))
+            producers_list.append(producer)
+            producer.start()
+
+        consumer = consumers.ConsumerProofOfConcept(fq)
+        consumer.start()
+
+        for producer in producers_list:
+            print("Waiting for producer %s..." % producer)
+            producer.join()
+
+        consumer.shutdown()
+    except KeyboardInterrupt:
+        print("Caugth Ctrl+C...")
+        # Graceful shutdown on all producers and consumers.
+        for p in producers_list:
+            p.shutdown()
+            p.join()
+        consumer.shutdown()
+        consumer.join()
 
 
 if __name__ == "__main__":
@@ -111,6 +142,7 @@ if __name__ == "__main__":
 
     if args.i:
         check_input_network_interfaces(args.i)
+        doit_live_capture(args.i)
 
     if args.r:
         check_input_pcap_capture_files(args.r)
