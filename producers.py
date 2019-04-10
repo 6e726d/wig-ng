@@ -37,7 +37,7 @@ class LiveNetworkCapture(Process):
     """
 
     SNAPLEN = 65535
-    PROMISC = True
+    PROMISC = False
     TIMEOUT = 100  # in miliseconds
 
     def __init__(self, network_interface, frames_queue, bpf_filter=None):
@@ -48,7 +48,7 @@ class LiveNetworkCapture(Process):
         self.__stop__ = Event()
         self.__ieee80211_frame_offset__ = None
         self.__open_network_interface__()
-        self.__set_ieee80211_frame_offset__()
+        self.__set_datalink__()
 
     def __open_network_interface__(self):
         """
@@ -61,22 +61,13 @@ class LiveNetworkCapture(Process):
         if self.__filter__:
             self.__pd__.setfilter(self.__filter__)
 
-    def __set_ieee80211_frame_offset__(self):
+    def __set_datalink__(self):
         """
-        This method sets the offset for the IEEE 802.11 frame data. We are not
-        using the Radiotap header. In case we have a datalink that has Radiotap
-        we need to process at least one frame to get the Radiotap length.
+        This method sets the datalink for the pcap network capture file.
         """
-        datalink = self.__pd__.datalink()
-        if datalink == DLT_IEEE802_11:
-            self.__ieee80211_frame_offset__ = 0
-        elif datalink == DLT_IEEE802_11_RADIO:
-            while True:
-                _, frame = self.__pd__.next()  # Ignore metadata header
-                if frame:
-                    self.__ieee80211_frame_offset__ = radiotap.get_length(frame)
-                    break
-        else:
+        self.__datalink__ = self.__pd__.datalink()
+        if not (self.__datalink__ == DLT_IEEE802_11 or \
+                self.__datalink__ == DLT_IEEE802_11_RADIO):
             msg = "%s is not a wireless interface." % self.__network_interface__
             raise ValueError(msg)
 
@@ -85,11 +76,19 @@ class LiveNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        while not self.__stop__.is_set():
-            _, frame = self.__pd__.next()  # Ignore metadata header
-            if frame:
-                buff = frame[self.__ieee80211_frame_offset__:]
-                self.__frames_queue__.put(buff)
+        try:
+            while not self.__stop__.is_set():
+                _, frame = self.__pd__.next()  # Ignore metadata header
+                if frame:
+                    if self.__datalink__ == DLT_IEEE802_11:
+                        offset = 0
+                    else:
+                        offset = radiotap.get_length(frame)
+                    buff = frame[offset:]
+                    self.__frames_queue__.put(buff)
+        # Ignore SIGINT signal, this is handled by parent.
+        except KeyboardInterrupt:
+            pass
 
     def shutdown(self):
         """
@@ -109,9 +108,9 @@ class OfflineNetworkCapture(Process):
         self.__frames_queue__ = frames_queue
         self.__filter__ = bpf_filter
         self.__stop__ = Event()
-        self.__ieee80211_frame_offset__ = None
+        self.__datalink__ = None
         self.__open_pcap_file__()
-        self.__set_ieee80211_frame_offset__()
+        self.__set_datalink__()
 
     def __open_pcap_file__(self):
         """
@@ -121,26 +120,13 @@ class OfflineNetworkCapture(Process):
         if self.__filter__:
             self.__pd__.setfilter(self.__filter__)
 
-    def __set_ieee80211_frame_offset__(self):
+    def __set_datalink__(self):
         """
-        This method sets the offset for the IEEE 802.11 frame data. We are not
-        using the Radiotap header. In case we have a datalink that has Radiotap
-        we need to process at least one frame to get the Radiotap length.
+        This method sets the datalink for the pcap network capture file.
         """
-        datalink = self.__pd__.datalink()
-        if datalink == DLT_IEEE802_11:
-            self.__ieee80211_frame_offset__ = 0
-        elif datalink == DLT_IEEE802_11_RADIO:
-            while True:
-                _, frame = self.__pd__.next()  # Ignore metadata header
-                if frame:
-                    self.__ieee80211_frame_offset__ = radiotap.get_length(frame)
-                    # We need to add the frame to the queue to avoid losing the
-                    # first frame from the pcap capture file.
-                    buff = frame[self.__ieee80211_frame_offset__:]
-                    self.__frames_queue__.put(buff)
-                    break
-        else:
+        self.__datalink__ = self.__pd__.datalink()
+        if not (self.__datalink__ == DLT_IEEE802_11 or \
+                self.__datalink__ == DLT_IEEE802_11_RADIO):
             msg = "%s is not a wireless interface." % self.__pcap_filename__
             raise ValueError(msg)
 
@@ -149,16 +135,24 @@ class OfflineNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        while not self.__stop__.is_set():
-            _, frame = self.__pd__.next()  # Ignore metadata header
-            if frame:
-                buff = frame[self.__ieee80211_frame_offset__:]
-                self.__frames_queue__.put(buff)
-            else:
-                # If we receive an empty frame as a result from calling the
-                # next method of the pcap descriptor we have reached the end
-                # of the pcap capture file.
-                break
+        try:
+            while not self.__stop__.is_set():
+                _, frame = self.__pd__.next()  # Ignore metadata header
+                if frame:
+                    if self.__datalink__ == DLT_IEEE802_11:
+                        offset = 0
+                    else:
+                        offset = radiotap.get_length(frame)
+                    buff = frame[offset:]
+                    self.__frames_queue__.put(buff)
+                else:
+                    # If we receive an empty frame as a result from calling the
+                    # next method of the pcap descriptor we have reached the end
+                    # of the pcap capture file.
+                    break
+        # Ignore SIGINT signal, this is handled by parent.
+        except KeyboardInterrupt:
+            pass
 
     def shutdown(self):
         """
