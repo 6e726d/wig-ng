@@ -69,7 +69,7 @@ def is_monitor_mode_set(network_interface):
     if not os.path.exists(path):
         raise Exception("Invalid network interface.")
     fd = open(path, "rb")
-    value = fd.read()
+    value = int(fd.read().strip())
     fd.close()
     if value == ARPHRD_IEEE80211 or value == ARPHRD_IEEE80211_RADIOTAP:
         return True
