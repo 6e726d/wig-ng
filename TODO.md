@@ -4,3 +4,4 @@
    BSSID/SSID exposing multiple networks.
  * Remove duplicated code on producers.py.
  * Add description to the application in wig-ng.py.
+ * Add a queue to handle error on child procesess.
