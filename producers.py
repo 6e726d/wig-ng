@@ -85,7 +85,7 @@ class LiveNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        while not self.__stop__:
+        while not self.__stop__.is_set():
             _, frame = self.__pd__.next()  # Ignore metadata header
             if frame:
                 buff = frame[self.__ieee80211_frame_offset__:]
@@ -135,6 +135,10 @@ class OfflineNetworkCapture(Process):
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
                     self.__ieee80211_frame_offset__ = radiotap.get_length(frame)
+                    # We need to add the frame to the queue to avoid losing the
+                    # first frame from the pcap capture file.
+                    buff = frame[self.__ieee80211_frame_offset__:]
+                    self.__frames_queue__.put(buff)
                     break
         else:
             msg = "%s is not a wireless interface." % self.__pcap_filename__
@@ -145,11 +149,16 @@ class OfflineNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        while not self.__stop__:
+        while not self.__stop__.is_set():
             _, frame = self.__pd__.next()  # Ignore metadata header
             if frame:
                 buff = frame[self.__ieee80211_frame_offset__:]
                 self.__frames_queue__.put(buff)
+            else:
+                # If we receive an empty frame as a result from calling the
+                # next method of the pcap descriptor we have reached the end
+                # of the pcap capture file.
+                break
 
     def shutdown(self):
         """
