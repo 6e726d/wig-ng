@@ -43,30 +43,35 @@ class ConsumerProofOfConcept(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        fd = open("wtf.txt", "wb")
-        while not self.__stop__.is_set():
-            try:
-                frame = self.__queue__.get(timeout=5)
-            except Empty:
-                break
-            frame_type = ieee80211.get_frame_type(frame)
-            if frame_type == 0:
-                self.__management_count__ += 1
-            elif frame_type == 1:
-                self.__control_count__ += 1
-            elif frame_type == 2:
-                self.__data_count__ += 1
-            else:
-                self.__wtf_count__ += 1
-                fd.write("%r" % frame)
-                fd.write("\n------------------------------\n")
-
+        try:
+            fd = open("wtf.txt", "wb")
+            while not self.__stop__.is_set():
+                try:
+                    frame = self.__queue__.get(timeout=5)
+                except Empty:
+                    print("Empty Queue")
+                    break
+                frame_type = ieee80211.get_frame_type(frame)
+                if frame_type == 0:
+                    self.__management_count__ += 1
+                elif frame_type == 1:
+                    self.__control_count__ += 1
+                elif frame_type == 2:
+                    self.__data_count__ += 1
+                else:
+                    self.__wtf_count__ += 1
+                    fd.write("%r" % frame)
+                    fd.write("\n------------------------------\n")
+        # Ignore SIGINT signal, this is handled by parent.
+        except KeyboardInterrupt:
+            pass
+        finally:
+            fd.close()
+        
         print("Management Frames: %d" % self.__management_count__)
         print("Control Frames: %d" % self.__control_count__)
         print("Data Frames: %d" % self.__data_count__)
         print("WTF: %d" % self.__wtf_count__)
-
-        fd.close()
 
     def shutdown(self):
         """
