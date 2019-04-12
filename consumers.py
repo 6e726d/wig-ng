@@ -24,6 +24,66 @@ from multiprocessing import Process, Event
 from helpers import ieee80211
 
 
+class MiddleMen(Process):
+    """
+    The objective of the intermediary consumer class is to push specific
+    type/subtype IEEE 802.11 frames to registered consumers.
+    """
+
+    def __init__(self, frames_queue):
+        Process.__init__(self)
+        self.__queue__ = frames_queue
+        self.__stop__ = Event()
+
+        self.__total_frames_count__ = 0
+        self.__type_management_count__ = 0
+        self.__type_control_count__ = 0
+        self.__type_data_count__ = 0
+        self.__type_unknown_count__ = 0
+
+    def run(self):
+        """
+        Process data from the frames queue and write them to specific queues.
+        """
+        try:
+            while not self.__stop__.is_set():
+                try:
+                    frame = self.__queue__.get(timeout=5)
+                except Empty:
+                    print("Empty Queue")
+                    break
+
+                self.__total_frames_count__ += 1
+
+                frame_type = ieee80211.get_frame_type(frame)
+                frame_subtype = ieee80211.get_frame_subtype(frame)
+
+                if frame_type == 0:
+                    self.__type_management_count__ += 1
+                elif frame_type == 1:
+                    self.__type_control_count__ += 1
+                elif frame_type == 2:
+                    self.__type_data_count__ += 1
+                else:
+                    self.__type_unknown_count__ += 1
+
+        # Ignore SIGINT signal, this is handled by parent.
+        except KeyboardInterrupt:
+            pass
+
+        print("Total: %d" % self.__total_frames_count__)
+        print("Management: %d" % self.__type_management_count__)
+        print("Control: %d" % self.__type_control_count__)
+        print("Data: %d" % self.__type_data_count__)
+        print("Unknown: %d" % self.__type_unknown_count__)
+
+    def shutdown(self):
+        """
+        This method sets the __stop__ event to stop the process.
+        """
+        self.__stop__.set()
+
+
 class ConsumerProofOfConcept(Process):
     """
     None
