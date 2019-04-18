@@ -33,6 +33,11 @@ import pcapy
 
 DESCRIPTION = ""  # TODO: Add application description
 
+# Verbose Count
+OUTPUT_INFO = 0
+OUTPUT_VERBOSE = 1
+OUTPUT_DEBUG = 2
+
 
 def check_input_network_interfaces(interfaces_list):
     """
@@ -66,7 +71,7 @@ def check_input_pcap_capture_files(files_list):
             raise Exception("PCAP Capture File Error.")
 
 
-def doit_pcap_files(files_list):
+def doit_pcap_files(files_list, verbose_count):
 
     try:
         fq = Queue()
@@ -74,7 +79,8 @@ def doit_pcap_files(files_list):
         producers_list = list()
         for file in files_list:
             producer = producers.OfflineNetworkCapture(file, fq)
-            print("Starting producer %s - %s" % (producer, file))
+            if verbose_count > OUTPUT_INFO:
+                print("Starting producer %s - %s" % (producer, file))
             producers_list.append(producer)
             producer.start()
 
@@ -82,7 +88,8 @@ def doit_pcap_files(files_list):
         consumer.start()
 
         for producer in producers_list:
-            print("Waiting for producer %s..." % producer)
+            if verbose_count > OUTPUT_INFO:
+                print("Waiting for producer %s..." % producer)
             producer.join()
 
         consumer.shutdown()
@@ -97,7 +104,7 @@ def doit_pcap_files(files_list):
         consumer.join()
 
 
-def doit_live_capture(interfaces_list):
+def doit_live_capture(interfaces_list, verbose_count):
 
     try:
         fq = Queue()
@@ -105,7 +112,8 @@ def doit_live_capture(interfaces_list):
         producers_list = list()
         for interface in interfaces_list:
             producer = producers.LiveNetworkCapture(interface, fq)
-            print("Starting producer %s - %s" % (producer, interface))
+            if verbose_count > OUTPUT_INFO:
+                print("Starting producer %s - %s" % (producer, interface))
             producers_list.append(producer)
             producer.start()
 
@@ -113,7 +121,8 @@ def doit_live_capture(interfaces_list):
         consumer.start()
 
         for producer in producers_list:
-            print("Waiting for producer %s..." % producer)
+            if verbose_count > OUTPUT_INFO:
+                print("Waiting for producer %s..." % producer)
             producer.join()
 
         consumer.shutdown()
@@ -129,21 +138,26 @@ def doit_live_capture(interfaces_list):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=DESCRIPTION)
+    parser.add_argument('-v', '--verbose',
+        dest='verbose_count',
+        action='count',
+        default=0,
+        help='Output verbosity (incremental).')
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-i',
+    group.add_argument('-i', '--interface',
         action='append',
         metavar='network interface',
-        help="IEEE 802.11 network interface on monitor mode.")
-    group.add_argument("-r",
+        help='IEEE 802.11 network interface on monitor mode.')
+    group.add_argument('-r',
         action='append',
         metavar='pcap file',
-        help="PCAP capture file with IEEE 802.11 network traffic.")
+        help='PCAP capture file with IEEE 802.11 network traffic.')
     args = parser.parse_args()
 
     if args.i:
         check_input_network_interfaces(args.i)
-        doit_live_capture(args.i)
+        doit_live_capture(args.i, verbose_count)
 
     if args.r:
         check_input_pcap_capture_files(args.r)
-        doit_pcap_files(args.r)
+        doit_pcap_files(args.r, verbose_count)
