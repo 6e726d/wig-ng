@@ -23,8 +23,9 @@ import argparse
 
 from multiprocessing import Queue
 
-import consumers
-import producers
+from consumers.base import ConsumerProofOfConcept
+from producers.base import LiveNetworkCapture
+from producers.base import OfflineNetworkCapture
 
 from helpers.network import interfaces
 
@@ -78,13 +79,13 @@ def doit_pcap_files(files_list, verbose_count):
 
         producers_list = list()
         for file in files_list:
-            producer = producers.OfflineNetworkCapture(file, fq)
+            producer = OfflineNetworkCapture(file, fq)
             if verbose_count > OUTPUT_INFO:
                 print("Starting producer %s - %s" % (producer, file))
             producers_list.append(producer)
             producer.start()
 
-        consumer = consumers.ConsumerProofOfConcept(fq)
+        consumer = ConsumerProofOfConcept(fq)
         consumer.start()
 
         for producer in producers_list:
@@ -111,13 +112,13 @@ def doit_live_capture(interfaces_list, verbose_count):
 
         producers_list = list()
         for interface in interfaces_list:
-            producer = producers.LiveNetworkCapture(interface, fq)
+            producer = LiveNetworkCapture(interface, fq)
             if verbose_count > OUTPUT_INFO:
                 print("Starting producer %s - %s" % (producer, interface))
             producers_list.append(producer)
             producer.start()
 
-        consumer = consumers.ConsumerProofOfConcept(fq)
+        consumer = ConsumerProofOfConcept(fq)
         consumer.start()
 
         for producer in producers_list:
@@ -156,8 +157,8 @@ if __name__ == "__main__":
 
     if args.i:
         check_input_network_interfaces(args.i)
-        doit_live_capture(args.i, verbose_count)
+        doit_live_capture(args.i, args.verbose_count)
 
     if args.r:
         check_input_pcap_capture_files(args.r)
-        doit_pcap_files(args.r, verbose_count)
+        doit_pcap_files(args.r, args.verbose_count)
