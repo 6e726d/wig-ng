@@ -19,21 +19,66 @@
 #
 
 from Queue import Empty
-from multiprocessing import Process, Event
+from multiprocessing import Process, Event, Queue
 
 from helpers import ieee80211
 
 
-class MiddleMen(Process):
+class Mediator(Process):
     """
     The objective of the intermediary consumer class is to push specific
-    type/subtype IEEE 802.11 frames to registered consumers.
+    type/subtype IEEE 802.11 frames to different frame processing classes.
     """
 
     def __init__(self, frames_queue):
         Process.__init__(self)
         self.__queue__ = frames_queue
         self.__stop__ = Event()
+
+        # self.__frames_stats_queue__ = Queue()
+        # self.__frames_stats__ = FramesStats(self.__frames_stats_queue__)
+        # self.__frames_stats__.start()
+
+    def run(self):
+        """
+        Process data from the frames queue and write them to specific queues.
+        """
+
+        self.__frames_stats_queue__ = Queue()
+        self.__frames_stats__ = FramesStats(self.__frames_stats_queue__)
+        self.__frames_stats__.start()
+
+        try:
+            while not self.__stop__.is_set():
+                try:
+                    frame = self.__queue__.get(timeout=5)
+                    self.__frames_stats_queue__.put(frame)
+                except Empty:
+                    pass
+        # Ignore SIGINT signal, this is handled by parent.
+        except KeyboardInterrupt:
+            pass
+
+        self.__frames_stats__.shutdown()
+        self.__frames_stats__.join()
+
+    def shutdown(self):
+        """
+        This method sets the __stop__ event to stop the process.
+        """
+        self.__stop__.set()
+
+
+class FramesStats(Process):
+    """
+    TODO: Documentation
+    """
+
+    def __init__(self, frames_queue):
+        Process.__init__(self)
+        self.__stop__ = Event()
+
+        self.__queue__ = frames_queue
 
         self.__total_frames_count__ = 0
         self.__type_management_count__ = 0
@@ -43,95 +88,36 @@ class MiddleMen(Process):
 
     def run(self):
         """
-        Process data from the frames queue and write them to specific queues.
+        TODO: Documentation
         """
         try:
             while not self.__stop__.is_set():
                 try:
                     frame = self.__queue__.get(timeout=5)
+                    self.__total_frames_count__ += 1
+
+                    frame_type = ieee80211.get_frame_type(frame)
+                    # frame_subtype = ieee80211.get_frame_subtype(frame)
+
+                    if frame_type == 0:
+                        self.__type_management_count__ += 1
+                    elif frame_type == 1:
+                        self.__type_control_count__ += 1
+                    elif frame_type == 2:
+                        self.__type_data_count__ += 1
+                    else:
+                        self.__type_unknown_count__ += 1
                 except Empty:
-                    print("Empty Queue")
-                    break
-
-                self.__total_frames_count__ += 1
-
-                frame_type = ieee80211.get_frame_type(frame)
-                frame_subtype = ieee80211.get_frame_subtype(frame)
-
-                if frame_type == 0:
-                    self.__type_management_count__ += 1
-                elif frame_type == 1:
-                    self.__type_control_count__ += 1
-                elif frame_type == 2:
-                    self.__type_data_count__ += 1
-                else:
-                    self.__type_unknown_count__ += 1
-
+                    pass
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
-
-        print("Total: %d" % self.__total_frames_count__)
-        print("Management: %d" % self.__type_management_count__)
-        print("Control: %d" % self.__type_control_count__)
-        print("Data: %d" % self.__type_data_count__)
-        print("Unknown: %d" % self.__type_unknown_count__)
-
-    def shutdown(self):
-        """
-        This method sets the __stop__ event to stop the process.
-        """
-        self.__stop__.set()
-
-
-class ConsumerProofOfConcept(Process):
-    """
-    None
-    """
-
-    def __init__(self, frames_queue):
-        Process.__init__(self)
-        self.__management_count__ = 0
-        self.__control_count__ = 0
-        self.__data_count__ = 0
-        self.__wtf_count__ = 0
-        self.__stop__ = Event()
-        self.__queue__ = frames_queue
-
-    def run(self):
-        """
-        This method reads frames from the pcap file descriptor and put them
-        into the frame queue.
-        """
-        try:
-            fd = open("wtf.txt", "wb")
-            while not self.__stop__.is_set():
-                try:
-                    frame = self.__queue__.get(timeout=5)
-                except Empty:
-                    print("Empty Queue")
-                    break
-                frame_type = ieee80211.get_frame_type(frame)
-                if frame_type == 0:
-                    self.__management_count__ += 1
-                elif frame_type == 1:
-                    self.__control_count__ += 1
-                elif frame_type == 2:
-                    self.__data_count__ += 1
-                else:
-                    self.__wtf_count__ += 1
-                    fd.write("%r" % frame)
-                    fd.write("\n------------------------------\n")
-        # Ignore SIGINT signal, this is handled by parent.
-        except KeyboardInterrupt:
-            pass
-        finally:
-            fd.close()
         
-        print("Management Frames: %d" % self.__management_count__)
-        print("Control Frames: %d" % self.__control_count__)
-        print("Data Frames: %d" % self.__data_count__)
-        print("WTF: %d" % self.__wtf_count__)
+        print("Frames: %d" % self.__total_frames_count__)
+        print("Management Frames: %d" % self.__type_management_count__)
+        print("Control Frames: %d" % self.__type_control_count__)
+        print("Data Frames: %d" % self.__type_data_count__)
+        print("Unknown Frames: %d" % self.__type_unknown_count__)
 
     def shutdown(self):
         """

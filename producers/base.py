@@ -76,8 +76,8 @@ class LiveNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        try:
-            while not self.__stop__.is_set():
+        while not self.__stop__.is_set():
+            try:
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
                     if self.__datalink__ == DLT_IEEE802_11:
@@ -86,9 +86,9 @@ class LiveNetworkCapture(Process):
                         offset = radiotap.get_length(frame)
                     buff = frame[offset:]
                     self.__frames_queue__.put(buff)
-        # Ignore SIGINT signal, this is handled by parent.
-        except KeyboardInterrupt:
-            pass
+            # Ignore SIGINT signal, this is handled by parent.
+            except KeyboardInterrupt:
+                pass
 
     def shutdown(self):
         """
@@ -135,8 +135,8 @@ class OfflineNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
-        try:
-            while not self.__stop__.is_set():
+        while not self.__stop__.is_set():
+            try:
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
                     if self.__datalink__ == DLT_IEEE802_11:
@@ -150,9 +150,9 @@ class OfflineNetworkCapture(Process):
                     # next method of the pcap descriptor we have reached the end
                     # of the pcap capture file.
                     break
-        # Ignore SIGINT signal, this is handled by parent.
-        except KeyboardInterrupt:
-            pass
+            # Ignore SIGINT signal, this is handled by parent.
+            except KeyboardInterrupt:
+                pass
 
     def shutdown(self):
         """

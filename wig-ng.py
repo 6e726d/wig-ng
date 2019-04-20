@@ -19,11 +19,12 @@
 #
 
 import os
+import time
 import argparse
 
-from multiprocessing import Queue
+from multiprocessing import Queue, TimeoutError
 
-from consumers.base import ConsumerProofOfConcept
+from consumers.base import Mediator
 from producers.base import LiveNetworkCapture
 from producers.base import OfflineNetworkCapture
 
@@ -85,24 +86,33 @@ def doit_pcap_files(files_list, verbose_count):
             producers_list.append(producer)
             producer.start()
 
-        consumer = ConsumerProofOfConcept(fq)
-        consumer.start()
+        mediator = Mediator(fq)
+        mediator.start()
 
-        for producer in producers_list:
-            if verbose_count > OUTPUT_INFO:
-                print("Waiting for producer %s..." % producer)
-            producer.join()
+        while True:
+            if not producers_list:
+                print("All producers ended.")
+                break
 
-        consumer.shutdown()
-        consumer.join()
+            for producer in producers_list:
+                if not producer.is_alive():
+                    print("%s finished" % producer)
+                    producers_list.remove(producer)
+                time.sleep(2)
+
+        mediator.shutdown()
+        mediator.join()
     except KeyboardInterrupt:
         print("Caugth Ctrl+C...")
         # Graceful shutdown on all producers and consumers.
-        for p in producers_list:
-            p.shutdown()
-            producer.join()
-        consumer.shutdown()
-        consumer.join()
+        for producer in producers_list:
+            print("Stoping %s" % producer)
+            producer.shutdown()
+            producer.join(10)
+            producer.terminate()
+        mediator.shutdown()
+        mediator.join(10)
+        mediator.terminate()
 
 
 def doit_live_capture(interfaces_list, verbose_count):
@@ -118,23 +128,23 @@ def doit_live_capture(interfaces_list, verbose_count):
             producers_list.append(producer)
             producer.start()
 
-        consumer = ConsumerProofOfConcept(fq)
-        consumer.start()
+        mediator = Mediator(fq)
+        mediator.start()
 
         for producer in producers_list:
             if verbose_count > OUTPUT_INFO:
                 print("Waiting for producer %s..." % producer)
             producer.join()
 
-        consumer.shutdown()
+        mediator.shutdown()
     except KeyboardInterrupt:
         print("Caugth Ctrl+C...")
         # Graceful shutdown on all producers and consumers.
-        for p in producers_list:
-            p.shutdown()
-            p.join()
-        consumer.shutdown()
-        consumer.join()
+        for producer in producers_list:
+            producer.shutdown()
+            producer.join()
+        mediator.shutdown()
+        mediator.join()
 
 
 if __name__ == "__main__":
@@ -155,7 +165,7 @@ if __name__ == "__main__":
         help='PCAP capture file with IEEE 802.11 network traffic.')
     args = parser.parse_args()
 
-    if args.i:
+    if args.interface:
         check_input_network_interfaces(args.i)
         doit_live_capture(args.i, args.verbose_count)
 
