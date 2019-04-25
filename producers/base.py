@@ -18,19 +18,26 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from multiprocessing import Process, Event
+from multiprocessing import Event
 
 import pcapy
 
 from helpers import radiotap
+from helpers.Processes import WigProcess
 
 # Link-Layer Headre Types
 # https://www.tcpdump.org/linktypes.html
 DLT_IEEE802_11 = 105
 DLT_IEEE802_11_RADIO = 127
 
+# Defines the type of producer.
+# An example of an finite producer is a offlice capture from pcap file.
+# An example of an infinite producer is a live capture from a network interface.
+FINITE_TYPE = 0
+INFINITE_TYPE = 1
 
-class LiveNetworkCapture(Process):
+
+class LiveNetworkCapture(WigProcess):
     """
     Live Network Capture produccer class objective is to capture network traffic
     from a network interface and put it a queue.
@@ -39,9 +46,10 @@ class LiveNetworkCapture(Process):
     SNAPLEN = 65535
     PROMISC = False
     TIMEOUT = 100  # in miliseconds
+    PRODUCER_TYPE = INFINITE_TYPE
 
     def __init__(self, network_interface, frames_queue, bpf_filter=None):
-        Process.__init__(self)
+        WigProcess.__init__(self)
         self.__network_interface__ = network_interface
         self.__frames_queue__ = frames_queue
         self.__filter__ = bpf_filter
@@ -76,16 +84,19 @@ class LiveNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
+        self.set_process_title()
+
         while not self.__stop__.is_set():
             try:
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
-                    if self.__datalink__ == DLT_IEEE802_11:
-                        offset = 0
-                    else:
+                    if not self.__datalink__ == DLT_IEEE802_11:
                         offset = radiotap.get_length(frame)
-                    buff = frame[offset:]
-                    self.__frames_queue__.put(buff)
+                        if radiotap.has_FCS(frame):
+                            frame = frame[offset:-4]
+                        else:
+                            frame = frame[offset:]
+                        self.__frames_queue__.put(frame)
             # Ignore SIGINT signal, this is handled by parent.
             except KeyboardInterrupt:
                 pass
@@ -97,13 +108,16 @@ class LiveNetworkCapture(Process):
         self.__stop__.set()
 
 
-class OfflineNetworkCapture(Process):
+class OfflineNetworkCapture(WigProcess):
     """
     Offline Network Capture produccer class objective is to read network traffic
     from a pcap file and put it a queue.
     """
+
+    PRODUCER_TYPE = FINITE_TYPE
+
     def __init__(self, pcap_filename, frames_queue, bpf_filter=None):
-        Process.__init__(self)
+        WigProcess.__init__(self)
         self.__pcap_filename__ = pcap_filename
         self.__frames_queue__ = frames_queue
         self.__filter__ = bpf_filter
@@ -135,16 +149,19 @@ class OfflineNetworkCapture(Process):
         This method reads frames from the pcap file descriptor and put them
         into the frame queue.
         """
+        self.set_process_title()
+
         while not self.__stop__.is_set():
             try:
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
-                    if self.__datalink__ == DLT_IEEE802_11:
-                        offset = 0
-                    else:
+                    if not self.__datalink__ == DLT_IEEE802_11:
                         offset = radiotap.get_length(frame)
-                    buff = frame[offset:]
-                    self.__frames_queue__.put(buff)
+                        if radiotap.has_FCS(frame):
+                            frame = frame[offset:-4]
+                        else:
+                            frame = frame[offset:]
+                        self.__frames_queue__.put(frame)
                 else:
                     # If we receive an empty frame as a result from calling the
                     # next method of the pcap descriptor we have reached the end

@@ -86,7 +86,7 @@ def doit_pcap_files(files_list, verbose_count):
             producers_list.append(producer)
             producer.start()
 
-        mediator = Mediator(fq)
+        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE)
         mediator.start()
 
         while True:
@@ -100,8 +100,16 @@ def doit_pcap_files(files_list, verbose_count):
                     producers_list.remove(producer)
                 time.sleep(2)
 
-        mediator.shutdown()
-        mediator.join()
+        # print("doit_pcap_files: before mediator shutdown.")
+        # mediator.shutdown()
+        # print("doit_pcap_files: after mediator shutdown.")
+        # print("doit_pcap_files: before mediator join.")
+        if mediator.is_alive():
+            mediator.join(60 * 15)  # Wait 15 minutes.
+            if mediator.is_alive():
+                mediator.terminate()
+        # mediator.terminate()
+        # print("doit_pcap_files: after mediator join.")
     except KeyboardInterrupt:
         print("Caugth Ctrl+C...")
         # Graceful shutdown on all producers and consumers.
@@ -128,7 +136,7 @@ def doit_live_capture(interfaces_list, verbose_count):
             producers_list.append(producer)
             producer.start()
 
-        mediator = Mediator(fq)
+        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE)
         mediator.start()
 
         for producer in producers_list:
@@ -166,8 +174,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.interface:
-        check_input_network_interfaces(args.i)
-        doit_live_capture(args.i, args.verbose_count)
+        check_input_network_interfaces(args.interface)
+        doit_live_capture(args.interface, args.verbose_count)
 
     if args.r:
         check_input_pcap_capture_files(args.r)

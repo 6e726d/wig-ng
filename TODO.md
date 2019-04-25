@@ -7,3 +7,5 @@
  * Add a queue to handle error on child procesess.
  * Relate producer with interfaces and files for verbose output.
  * Add realmode mode to print output in realmode.
+ * Define a max number of interfaces or pcap files to avoid consuming all the
+ ram.

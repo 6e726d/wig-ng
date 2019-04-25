@@ -24,6 +24,13 @@
 
 import struct
 
+# Present Flags
+PF_TSFT_MASK  = 0b00000000000000000000000000000001
+PF_FLAGS_MASK = 0b00000000000000000000000000000010
+
+# Flags
+F_FCS_AT_END_MASK = 0b00010000
+
 
 def get_version(buff):
     """
@@ -47,3 +54,26 @@ def get_length(buff):
     """
     length = struct.unpack("<H", buff[2:4])[0]
     return length
+
+def get_present_flags(buff):
+    """
+    Returns present flags.
+    The present flags field is a bitmask of the radiotap data fields that
+    follows the radiotap header.
+    """
+    present_flags = struct.unpack("<I", buff[4:8])[0]
+    return present_flags
+
+def has_FCS(buff):
+    """
+    Returns a True if the FCS_AT_END bit flag is set.
+    """
+    present_flags = get_present_flags(buff)
+    if (present_flags & PF_FLAGS_MASK) != 0:
+        if (present_flags & PF_TSFT_MASK) != 0:
+            offset = 16
+        else:
+            offset = 8
+        flags = ord(buff[offset])
+        return (flags & F_FCS_AT_END_MASK) >> 4
+    raise ValueError("No Radiotap Flags!")
