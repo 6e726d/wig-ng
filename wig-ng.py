@@ -82,7 +82,7 @@ def doit_pcap_files(files_list, verbose_count):
         for file in files_list:
             producer = OfflineNetworkCapture(file, fq)
             if verbose_count > OUTPUT_INFO:
-                print("Starting producer %s - %s" % (producer, file))
+                print("%s - %s" % (producer, file))
             producers_list.append(producer)
             producer.start()
 
@@ -132,7 +132,7 @@ def doit_live_capture(interfaces_list, verbose_count):
         for interface in interfaces_list:
             producer = LiveNetworkCapture(interface, fq)
             if verbose_count > OUTPUT_INFO:
-                print("Starting producer %s - %s" % (producer, interface))
+                print("%s - %s" % (producer, interface))
             producers_list.append(producer)
             producer.start()
 
