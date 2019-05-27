@@ -19,6 +19,8 @@
 #
 
 import time
+import datetime
+import traceback
 
 from Queue import Empty
 from multiprocessing import Event, Queue, TimeoutError
@@ -99,25 +101,44 @@ class Mediator(WigProcess):
         finally:
             # We need to wait for consumers to finish.
             print("Mediator Finally")
-            finished_consumers_count = 0
+            print("Consumer List: %r" % consumer_list)
             while True:
-                if finished_consumers_count == len(consumer_list):
-                    print("All consumers ended...")
-                    break
-                for item in consumer_list:
-                    consumer = item[0]
-                    consumer_queue = item[1]
-                    # If consumer queue is empty we assume the consumer has
-                    # finished. This could be false in some cases. This needs
-                    # a fix.
-                    if consumer_queue.empty():
-                        consumer.shutdown()
-                    if not consumer.is_alive():
-                        finished_consumers_count += 1
-                        print("Consumer %s ended." %
-                              consumer.__class__.__name__)
-                # Wait one second between checks to avoid high cpu consumption.
-                time.sleep(5)
+                try:
+                    print(".")
+                    if consumer_list:
+                        print("%r" % consumer_list)
+                        for item in consumer_list:
+                            consumer = item[0]
+                            consumer_queue = item[1]
+                            print(consumer.__class__.__name__)
+                            print(consumer_queue.qsize())
+                            if consumer_queue.empty():
+                                consumer.shutdown()
+                                consumer_list.remove(item)
+                    else:
+                        print("break")
+                        print(datetime.datetime.now())
+                        break
+                    # for item in consumer_list:
+                        # print("Item: %r" % item)
+                        # consumer = item[0]
+                        # consumer_queue = item[1]
+                        # If consumer queue is empty we assume the consumer has
+                        # finished. This could be false in some cases. This needs
+                        # a fix.
+                        # if consumer_queue.empty():
+                            # consumer.shutdown()
+                        # if not consumer.is_alive():
+                            # print("Consumer %s ended." %
+                                # consumer.__class__.__name__),
+                            # print(datetime.datetime.now())
+                            # consumer_list.remove(item)
+                    # Wait one second between checks to avoid high cpu consumption.
+                    time.sleep(5)
+                # except KeyboardInterrupt:
+                    # traceback.print_stack()
+                except Exception, e:
+                    print("%s" % str(e))
 
     def run_from_infinite_producers(self):
         """
