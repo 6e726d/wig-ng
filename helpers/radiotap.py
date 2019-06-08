@@ -24,12 +24,23 @@
 
 import struct
 
+# Structures Size
+VERSION_SIZE = 1
+PADDING_SIZE = 1
+LENGTH_SIZE = 2
+PRESENT_FLAGS_SIZE = 4
+MAC_TIMESTAMP_SIZE = 8
+
 # Present Flags
 PF_TSFT_MASK  = 0b00000000000000000000000000000001
 PF_FLAGS_MASK = 0b00000000000000000000000000000010
+EF_FLAGS_MASK = 0b10000000000000000000000000000000  # Extended presence masks
 
 # Flags
 F_FCS_AT_END_MASK = 0b00010000
+
+# Version Constant
+SUPPORTED_VERSION = 0
 
 
 def get_version(buff):
@@ -38,8 +49,9 @@ def get_version(buff):
     The version field indicates which major version of the radiotap header is
     in use. Currently, this is always 0.
     """
-    version = ord(buff)[0]
-    if version != 0:
+    idx = 0
+    version = ord(buff)[idx]
+    if version != SUPPORTED_VERSION:
         raise ValueError("Invalid Radiotap version.")
     return version
 
@@ -52,28 +64,40 @@ def get_length(buff):
     radiotap data, even if their parser doesn’t understand all of the data
     fields specified.
     """
-    length = struct.unpack("<H", buff[2:4])[0]
+    idx = 2
+    size = LENGTH_SIZE
+    length = struct.unpack("<H", buff[idx:idx+size])[0]
     return length
 
 def get_present_flags(buff):
     """
-    Returns present flags.
+    Returns a list of present flags.
     The present flags field is a bitmask of the radiotap data fields that
     follows the radiotap header.
     """
-    present_flags = struct.unpack("<I", buff[4:8])[0]
-    return present_flags
+    idx = 4
+    size = PRESENT_FLAGS_SIZE
+    result = list()
+    while True:
+        present_flags = struct.unpack("<I", buff[idx:idx+size])[0]
+        result.append(present_flags)
+        if (present_flags & EF_FLAGS_MASK) == 0:
+            break
+        idx += size
+    return result
 
 def has_FCS(buff):
     """
     Returns a True if the FCS_AT_END bit flag is set.
     """
-    present_flags = get_present_flags(buff)
+    present_flags_list = get_present_flags(buff)
+    # To check for FCS we only need the first present flags.
+    present_flags = present_flags_list[0]
+    present_flags_end = len(present_flags_list) * PRESENT_FLAGS_SIZE
+    offset = VERSION_SIZE + PADDING_SIZE + LENGTH_SIZE + present_flags_end
     if (present_flags & PF_FLAGS_MASK) != 0:
         if (present_flags & PF_TSFT_MASK) != 0:
-            offset = 16
-        else:
-            offset = 8
+            offset += MAC_TIMESTAMP_SIZE
         flags = ord(buff[offset])
         return (flags & F_FCS_AT_END_MASK) >> 4
     raise ValueError("No Radiotap Flags!")
