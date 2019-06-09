@@ -104,7 +104,6 @@ class Mediator(WigProcess):
             print("Consumer List: %r" % consumer_list)
             while True:
                 try:
-                    print(".")
                     if consumer_list:
                         print("%r" % consumer_list)
                         for item in consumer_list:
