@@ -36,13 +36,18 @@ class InformationElementsStats(WigProcess):
     """
 
     SUBTYPE_WHITELIST = [
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_BEACON,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_PROBE_REQUEST,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_PROBE_RESPONSE,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ASSOCIATION_REQUEST,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ASSOCIATION_RESPONSE,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_REQUEST,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_RESPONSE,
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ASSOCIATION_REQUEST,  # 00 - 00
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ASSOCIATION_RESPONSE,  # 00 - 01
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_REQUEST,  # 00 - 02
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_RESPONSE,  # 00 - 03
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_PROBE_REQUEST,  # 00 - 04
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_PROBE_RESPONSE,  # 00 - 05
+        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_BEACON,  # 00 - 08
+        # dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ATIM,  # 00 - 09
+        # dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_DISASSOCIATION,  # 00 - 10
+        # dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_AUTHENTICATION,  # 00 - 11
+        # dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_DEAUTHENTICATION,  # 00 - 12
+        # dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ACTION,  # 00 - 13
     ]
 
     HDR_SIZE = {
@@ -98,7 +103,6 @@ class InformationElementsStats(WigProcess):
                     try:
                         self.decoder.decode(frame)
                     except Exception:
-                        # print("Exception: %s" % e)
                         self.malformed +=1
                         continue
                     frame_control = self.decoder.get_protocol(dot11.Dot11)
@@ -111,7 +115,7 @@ class InformationElementsStats(WigProcess):
                         if fragment_number == 0:
                             child = mgt_frame.child()
                             header_size = self.HDR_SIZE[frame_control.get_subtype()]
-                            self.process_body(child, header_size)
+                            self.process_body(child, header_size, frame)
                 except Empty:
                     pass
         # Ignore SIGINT signal, this is handled by parent.
@@ -119,22 +123,28 @@ class InformationElementsStats(WigProcess):
             pass
 
         for tag_id, count in self.__tag_stats__.items():
-            print("TAG: %02X - %d" % (tag_id, count))
+            if tag_id in ieee80211.tag_strings.keys():
+                print("TAG: %02X [%s] - %d" % (tag_id,
+                                               ieee80211.tag_strings[tag_id],
+                                               count))
+            else:
+                print("TAG: %02X - %d" % (tag_id, count))
         print("Malformed frames: %d" % self.malformed)
 
-
-    def process_body(self, child, offset):
+    def process_body(self, child, offset, raw):
         """
         TODO: Documentation
         """
         buff = child.get_header_as_string()[offset:]
         ies = InformationElementsStats.get_ie_list(buff)
         for ie in ies:
-            (tag, length, value) = ie
-            if tag not in self.__tag_stats__.keys():
-                self.__tag_stats__[tag] = 1
-            else:
-                self.__tag_stats__[tag] += 1
+            tag, length, value = ie
+            # We avoid adding information elements with invalid length.
+            if length == len(value) and length > 0:
+                if tag not in self.__tag_stats__.keys():
+                    self.__tag_stats__[tag] = 1
+                else:
+                    self.__tag_stats__[tag] += 1
 
     @staticmethod
     def get_ie_list(buff):
@@ -143,16 +153,23 @@ class InformationElementsStats(WigProcess):
         """
         result = list()
         idx = 0
+        invalid = 0
         while True:
-            if len(buff) < 3:
-                break
             tag = struct.unpack("B", buff[idx])[0]
             length = struct.unpack("B", buff[idx+1])[0]
             value = buff[idx+2:idx+2+length]
+            if length == 0 or length > len(value):
+                invalid += 1
             result.append((tag, length, value))
-            idx += length + 2
+            idx += (length + 2)
             if idx >= len(buff):
                 break
+            # if len(buff) < 3:
+                # break
+        # In case we found more than one invalid information element we asume
+        # the frame contains invalid data. 
+        if invalid > 1:
+            return list()
         return result
 
     def shutdown(self):
