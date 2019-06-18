@@ -90,13 +90,13 @@ class LiveNetworkCapture(WigProcess):
             try:
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
-                    if not self.__datalink__ == DLT_IEEE802_11:
+                    if self.__datalink__ == DLT_IEEE802_11_RADIO:
                         offset = radiotap.get_length(frame)
                         if radiotap.has_FCS(frame):
                             frame = frame[offset:-4]
                         else:
                             frame = frame[offset:]
-                        self.__frames_queue__.put(frame)
+                    self.__frames_queue__.put(frame)
             # Ignore SIGINT signal, this is handled by parent.
             except KeyboardInterrupt:
                 pass
@@ -155,13 +155,13 @@ class OfflineNetworkCapture(WigProcess):
             try:
                 _, frame = self.__pd__.next()  # Ignore metadata header
                 if frame:
-                    if not self.__datalink__ == DLT_IEEE802_11:
+                    if self.__datalink__ == DLT_IEEE802_11_RADIO:
                         offset = radiotap.get_length(frame)
                         if radiotap.has_FCS(frame):
                             frame = frame[offset:-4]
                         else:
                             frame = frame[offset:]
-                        self.__frames_queue__.put(frame)
+                    self.__frames_queue__.put(frame)
                 else:
                     # If we receive an empty frame as a result from calling the
                     # next method of the pcap descriptor we have reached the end
