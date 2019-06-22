@@ -40,6 +40,8 @@ OUTPUT_INFO = 0
 OUTPUT_VERBOSE = 1
 OUTPUT_DEBUG = 2
 
+SUPPORTED_EXTENSIONS = ["cap", "pcap"]
+
 
 def check_input_network_interfaces(interfaces_list):
     """
@@ -155,13 +157,44 @@ def doit_live_capture(interfaces_list, verbose_count):
         mediator.join()
 
 
+class PcapCatureDir(argparse.Action):
+    """
+    ArgParse Action that checks for a valid directory containing at leats one
+    pcap capture file.
+    """
+    def __call__(self, parser, namespace, values, option_string=None):
+        _dir = values
+        if not os.path.isdir(_dir):
+            parser.error("%s is not a valid path" % _dir)
+
+        if os.access(_dir, os.R_OK):
+            setattr(namespace, self.dest, _dir)
+        else:
+            parser.error("%s is not a readable dir" % _dir)
+
+        has_pcap_files = False
+        _files = list()
+        for (root, _, files) in os.walk(_dir):
+            for filename in files:
+                extension = filename.split(".")[-1]
+                if extension in SUPPORTED_EXTENSIONS:
+                    has_pcap_files = True
+                    _files.append(os.path.join(root, filename))
+        if not has_pcap_files:
+            parser.error("%s doesn't contain pcap files." % _dir)
+        else:
+            setattr(namespace, self.dest, _files)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=DESCRIPTION)
+
     parser.add_argument('-v', '--verbose',
         dest='verbose_count',
         action='count',
         default=0,
         help='Output verbosity (incremental).')
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-i', '--interface',
         action='append',
@@ -171,6 +204,11 @@ if __name__ == "__main__":
         action='append',
         metavar='pcap file',
         help='PCAP capture file with IEEE 802.11 network traffic.')
+    group.add_argument('-R',
+        action=PcapCatureDir,
+        metavar='pcap directory',
+        help='Directory with PCAP capture files.')
+
     args = parser.parse_args()
 
     if args.interface:
@@ -180,3 +218,7 @@ if __name__ == "__main__":
     if args.r:
         check_input_pcap_capture_files(args.r)
         doit_pcap_files(args.r, args.verbose_count)
+
+    if args.R:
+        check_input_pcap_capture_files(args.R)
+        doit_pcap_files(args.R, args.verbose_count)
