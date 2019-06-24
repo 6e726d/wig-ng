@@ -75,21 +75,39 @@ def check_input_pcap_capture_files(files_list):
             raise Exception("PCAP Capture File Error.")
 
 
-def doit_pcap_files(files_list, verbose_count):
+def doit_pcap_files(files_list, concurrent_files, verbose_count):
 
     try:
         fq = Queue()
 
-        producers_list = list()
-        for file in files_list:
-            producer = OfflineNetworkCapture(file, fq)
-            if verbose_count > OUTPUT_INFO:
-                print("%s - %s" % (producer, file))
-            producers_list.append(producer)
-            producer.start()
+        mediator = Mediator(fq, OfflineNetworkCapture.PRODUCER_TYPE)
 
-        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE)
-        mediator.start()
+        producers_list = list()
+        while files_list:
+            _file = files_list[0]
+
+            if len(producers_list) < concurrent_files:
+                producer = OfflineNetworkCapture(_file, fq)
+                if verbose_count > OUTPUT_INFO:
+                    print("%s - %s" % (producer, _file))
+                producers_list.append(producer)
+                producer.start()
+                files_list.remove(_file)
+
+            # Start mediator as soon as we have one or more producers
+            if not mediator.is_alive():
+                mediator.start()
+
+            for producer in producers_list:
+                if not producer.is_alive():
+                    print("%s finished" % producer)
+                    producers_list.remove(producer)
+
+            # To avoid 100% CPU usage
+            time.sleep(1)
+
+        # We started all producers, we can flag the timeout event.
+        mediator.timeout_event()
 
         while True:
             if not producers_list:
@@ -100,18 +118,13 @@ def doit_pcap_files(files_list, verbose_count):
                 if not producer.is_alive():
                     print("%s finished" % producer)
                     producers_list.remove(producer)
-                time.sleep(2)
+                time.sleep(1)
 
-        # print("doit_pcap_files: before mediator shutdown.")
-        # mediator.shutdown()
-        # print("doit_pcap_files: after mediator shutdown.")
-        # print("doit_pcap_files: before mediator join.")
         if mediator.is_alive():
-            mediator.join(60 * 15)  # Wait 15 minutes.
+            # Give mediator 15 minutes to join.
+            mediator.join(60 * 15)
             if mediator.is_alive():
                 mediator.terminate()
-        # mediator.terminate()
-        # print("doit_pcap_files: after mediator join.")
     except KeyboardInterrupt:
         print("Caugth Ctrl+C...")
         # Graceful shutdown on all producers and consumers.
@@ -195,6 +208,14 @@ if __name__ == "__main__":
         default=0,
         help='Output verbosity (incremental).')
 
+    parser.add_argument('-c', '--concurrent',
+        # nargs='?',
+        # const=1,
+        type=int,
+        default=4,
+        metavar='network interface',
+        help='Number of PCAP capture files to process simultaneously.')
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-i', '--interface',
         action='append',
@@ -217,8 +238,8 @@ if __name__ == "__main__":
 
     if args.r:
         check_input_pcap_capture_files(args.r)
-        doit_pcap_files(args.r, args.verbose_count)
+        doit_pcap_files(args.r, args.concurrent, args.verbose_count)
 
     if args.R:
         check_input_pcap_capture_files(args.R)
-        doit_pcap_files(args.R, args.verbose_count)
+        doit_pcap_files(args.R, args.concurrent, args.verbose_count)

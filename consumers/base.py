@@ -44,6 +44,7 @@ class Mediator(WigProcess):
         self.__stop__ = Event()
         self.__producer_type__ = producer_type
         self.__passive__ = passive
+        self.__timeout_event__ = Event()
 
     def run(self):
         """
@@ -72,11 +73,17 @@ class Mediator(WigProcess):
 
         try:
             while not self.__stop__.is_set():
-                # We are working with a finite producer, such as pcap file, we
-                # wait for a couple of seconds if the queue is empty we assume
-                # producers have finish and we stop processing.
                 try:
-                    frame = self.__queue__.get(timeout=30)
+                    if self.__timeout_event__.is_set():
+                        # We are working with a finite producer, such as pcap
+                        # file, we wait for a couple of seconds if the queue is
+                        # empty we assume producers have finish and we stop
+                        # processing.
+                        frame = self.__queue__.get(timeout=30)
+                    else:
+                        # The timeout_event is not set, we still have producers
+                        # pending to start. We need to wait.
+                        frame = self.__queue__.get(timeout=300)
                 except Empty:
                     print("Empty Queue.")
                     break
@@ -198,6 +205,15 @@ class Mediator(WigProcess):
         """
         print("Mediator - shutdown.")
         self.__stop__.set()
+
+    def timeout_event(self):
+        """
+        This method sets the __timeout_event__ to change the queue timeout.
+        This was added to fix the race condition that happends between a new
+        producer starts and the queue timeout monitoring in the mediator.
+        """
+        print("Mediator timeout event!!!")
+        self.__timeout_event__.set()
 
 
 class FramesStats(WigProcess):
