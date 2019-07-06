@@ -30,6 +30,7 @@ from helpers.Processes import WigProcess
 from producers.base import FINITE_TYPE, INFINITE_TYPE
 
 from uncommon import InformationElementsStats
+from hp import HewlettPackardVendorSpecificTypeZero
 
 
 class Mediator(WigProcess):
@@ -65,7 +66,8 @@ class Mediator(WigProcess):
         # Consumers initialization
         consumer_list = list()
         for consumer in [FramesStats,
-                         InformationElementsStats]:
+                         InformationElementsStats,
+                         HewlettPackardVendorSpecificTypeZero]:
             consumer_queue = Queue()
             consumer_instance = consumer(consumer_queue)
             consumer_instance.start()
