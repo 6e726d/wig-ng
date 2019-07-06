@@ -20,6 +20,9 @@
 
 import struct
 
+from impacket import dot11
+
+
 FRAME_CONTROL_HEADER_LENGTH = 2
 
 TYPE_MGMT = 0b00
@@ -444,6 +447,9 @@ tag_strings = {
     TAG_ELEMENT_ID_EXTENSION: "Element ID Extension",
 }
 
+MICROSOFT_OUI = "\x00\x50\xF2"
+VENDOR_SPECIFIC_WPA_ID = "\x01"
+
 
 def get_frame_type(frame_control):
     """
@@ -457,3 +463,42 @@ def get_frame_subtype(frame_control):
     Returns frame subtype.
     """
     return (ord(frame_control[0]) & 0b11110000) >> 4
+
+
+def get_security(frame):
+    """Returns the network security. The values can be OPEN, WEP, WPA or WPA2."""
+    cap = frame.get_capabilities()
+
+    def is_wpa_ie_present(vendor_specific_ies):
+        for oui, data in vendor_specific_ies:
+            if oui == MICROSOFT_OUI and data[0] == VENDOR_SPECIFIC_WPA_ID:
+                return True
+        return False
+
+    if cap & dot11.Dot11ManagementCapabilities.CAPABILITY_PRIVACY == 0:
+        return "OPEN"
+    else:
+        if frame._get_element(dot11.DOT11_MANAGEMENT_ELEMENTS.RSN):
+            return "WPA2"
+        elif is_wpa_ie_present(frame.get_vendor_specific()):
+            return "WPA"
+        else:
+            return "WEP"
+
+
+def get_string_mac_address_from_buffer(buff):
+    """Returns string representation of a MAC address from a buffer."""
+    return ":".join('%02x' % ord(octet) for octet in buff)
+
+
+def get_string_mac_address_from_array(buff):
+    """Returns string representation of a MAC address from a array."""
+    return ":".join('%02x' % octet for octet in buff)
+
+
+def get_buffer_from_string_mac_address(mac_address):
+    """Returns buffer representation of a MAC address from a string."""
+    result = str()
+    for octet in mac_address.split(":"):
+        result += chr(int(octet, 16))
+    return result
