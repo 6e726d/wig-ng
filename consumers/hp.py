@@ -126,6 +126,8 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                                 self.process_frame(frame_control, mgt_frame)
                 except Empty:
                     pass
+                except Exception, e:
+                    print(str(e))
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
