@@ -136,15 +136,25 @@ class InformationElementsStats(WigProcess):
         TODO: Documentation
         """
         buff = child.get_header_as_string()[offset:]
-        ies = InformationElementsStats.get_ie_list(buff)
-        for ie in ies:
-            tag, length, value = ie
-            # We avoid adding information elements with invalid length.
-            if length == len(value) and length > 0:
-                if tag not in self.__tag_stats__.keys():
-                    self.__tag_stats__[tag] = 1
-                else:
-                    self.__tag_stats__[tag] += 1
+        try:
+            ies = InformationElementsStats.get_ie_list(buff)
+        except Exception, e:
+            print("%s" % e)
+            print(repr(buff))
+        if ies:
+            for ie in ies:
+                tag, length, value = ie
+                if tag not in ieee80211.tag_strings.keys():
+                    print("TAG: %02X" % tag)
+                    print("LEN: %02X" % length)
+                    print("%r" % value)
+                    print(repr(buff))
+                # We avoid adding information elements with invalid length.
+                if length == len(value) and length > 0:
+                    if tag not in self.__tag_stats__.keys():
+                        self.__tag_stats__[tag] = 1
+                    else:
+                        self.__tag_stats__[tag] += 1
 
     @staticmethod
     def get_ie_list(buff):
