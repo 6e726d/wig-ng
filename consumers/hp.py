@@ -35,16 +35,6 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
     TODO: Documentation
     """
 
-    SUBTYPE_WHITELIST = [
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_PROBE_RESPONSE,  # 00 - 05
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_BEACON,  # 00 - 08
-    ]
-
-    HDR_SIZE = {
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_BEACON: 12,
-        dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_PROBE_RESPONSE: 12,
-    }
-
     hp_ie_oui = "\x08\x00\x09"
 
     regex_list = ["^HP-Print-[0-9A-Fa-f][0-9A-Fa-f]-(.*)$",

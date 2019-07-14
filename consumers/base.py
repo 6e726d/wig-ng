@@ -29,6 +29,7 @@ from helpers import ieee80211
 from helpers.Processes import WigProcess
 from producers.base import FINITE_TYPE, INFINITE_TYPE
 
+from wps import WiFiProtectedSetup
 from uncommon import InformationElementsStats
 from hp import HewlettPackardVendorSpecificTypeZero
 
@@ -46,6 +47,10 @@ class Mediator(WigProcess):
         self.__producer_type__ = producer_type
         self.__passive__ = passive
         self.__timeout_event__ = Event()
+        self.consumers_list = [FramesStats,
+                               InformationElementsStats,
+                               WiFiProtectedSetup,
+                               HewlettPackardVendorSpecificTypeZero]
 
     def run(self):
         """
@@ -65,9 +70,7 @@ class Mediator(WigProcess):
         """
         # Consumers initialization
         consumer_list = list()
-        for consumer in [FramesStats,
-                         InformationElementsStats,
-                         HewlettPackardVendorSpecificTypeZero]:
+        for consumer in self.consumers_list:
             consumer_queue = Queue()
             consumer_instance = consumer(consumer_queue)
             consumer_instance.start()
@@ -109,8 +112,9 @@ class Mediator(WigProcess):
             print(str(e))
         finally:
             # We need to wait for consumers to finish.
-            print("Mediator Finally")
-            print("Consumer List: %r" % consumer_list)
+            print("Waiting for modules to finish. Please wait...")
+            # print("Mediator Finally")
+            # print("Consumer List: %r" % consumer_list)
             while True:
                 try:
                     if consumer_list:
@@ -124,24 +128,8 @@ class Mediator(WigProcess):
                                 consumer.shutdown()
                                 consumer_list.remove(item)
                     else:
-                        print("break")
-                        print(datetime.datetime.now())
                         break
-                    # for item in consumer_list:
-                        # print("Item: %r" % item)
-                        # consumer = item[0]
-                        # consumer_queue = item[1]
-                        # If consumer queue is empty we assume the consumer has
-                        # finished. This could be false in some cases. This needs
-                        # a fix.
-                        # if consumer_queue.empty():
-                            # consumer.shutdown()
-                        # if not consumer.is_alive():
-                            # print("Consumer %s ended." %
-                                # consumer.__class__.__name__),
-                            # print(datetime.datetime.now())
-                            # consumer_list.remove(item)
-                    # Wait one second between checks to avoid high cpu consumption.
+                    # Wait between checks to avoid high cpu consumption.
                     time.sleep(5)
                 # except KeyboardInterrupt:
                     # traceback.print_stack()
@@ -155,8 +143,7 @@ class Mediator(WigProcess):
         """
         # Consumers initialization
         consumer_list = list()
-        for consumer in [FramesStats,
-                         InformationElementsStats]:
+        for consumer in self.consumers_list:
             consumer_queue = Queue()
             consumer_instance = consumer(consumer_queue)
             consumer_instance.start()
