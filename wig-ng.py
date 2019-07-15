@@ -209,11 +209,9 @@ if __name__ == "__main__":
         help='Output verbosity (incremental).')
 
     parser.add_argument('-c', '--concurrent',
-        # nargs='?',
-        # const=1,
         type=int,
         default=4,
-        metavar='network interface',
+        metavar='count',
         help='Number of PCAP capture files to process simultaneously.')
 
     group = parser.add_mutually_exclusive_group(required=True)
