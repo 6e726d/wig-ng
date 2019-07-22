@@ -95,8 +95,6 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         """
         TODO: Documentation
         """
-        p = cProfile.Profile()
-        p.enable()
 
         self.set_process_title()
 
@@ -128,18 +126,6 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
-
-        p.disable()
-        pstats.Stats(p).sort_stats('cumulative').print_stats(30)
-
-        # for tag_id, count in self.__tag_stats__.items():
-            # if tag_id in ieee80211.tag_strings.keys():
-                # print("TAG: %02X [%s] - %d" % (tag_id,
-                                               # ieee80211.tag_strings[tag_id],
-                                               # count))
-            # else:
-                # print("TAG: %02X - %d" % (tag_id, count))
-        # print("Malformed frames: %d" % self.malformed)
 
     def process_hp_ie(self, data, debug=False):
         """Process HP wireless printers information element."""
