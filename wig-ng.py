@@ -29,16 +29,12 @@ from producers.base import LiveNetworkCapture
 from producers.base import OfflineNetworkCapture
 
 from helpers.network import interfaces
+from helpers.output import writer
 
 import pcapy
 
 
 DESCRIPTION = ""  # TODO: Add application description
-
-# Verbose Count
-OUTPUT_INFO = 0
-OUTPUT_VERBOSE = 1
-OUTPUT_DEBUG = 2
 
 SUPPORTED_EXTENSIONS = ["cap", "pcap"]
 
@@ -75,12 +71,12 @@ def check_input_pcap_capture_files(files_list):
             raise Exception("PCAP Capture File Error.")
 
 
-def doit_pcap_files(files_list, concurrent_files, verbose_count):
+def doit_pcap_files(files_list, concurrent_files, verbose_level):
 
     try:
         fq = Queue()
 
-        mediator = Mediator(fq, OfflineNetworkCapture.PRODUCER_TYPE)
+        mediator = Mediator(fq, OfflineNetworkCapture.PRODUCER_TYPE, verbose_level)
 
         producers_list = list()
         while files_list:
@@ -88,7 +84,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_count):
 
             if len(producers_list) < concurrent_files:
                 producer = OfflineNetworkCapture(_file, fq)
-                if verbose_count > OUTPUT_INFO:
+                if verbose_level > writer.OUTPUT_INFO:
                     print("%s - %s" % (producer, _file))
                 producers_list.append(producer)
                 producer.start()
@@ -138,7 +134,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_count):
         mediator.terminate()
 
 
-def doit_live_capture(interfaces_list, verbose_count):
+def doit_live_capture(interfaces_list, verbose_level):
 
     try:
         fq = Queue()
@@ -146,16 +142,16 @@ def doit_live_capture(interfaces_list, verbose_count):
         producers_list = list()
         for interface in interfaces_list:
             producer = LiveNetworkCapture(interface, fq)
-            if verbose_count > OUTPUT_INFO:
+            if verbose_level > writer.OUTPUT_INFO:
                 print("%s - %s" % (producer, interface))
             producers_list.append(producer)
             producer.start()
 
-        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE)
+        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE, verbose_level)
         mediator.start()
 
         for producer in producers_list:
-            if verbose_count > OUTPUT_INFO:
+            if verbose_level > writer.OUTPUT_INFO:
                 print("Waiting for producer %s..." % producer)
             producer.join()
 
@@ -203,7 +199,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=DESCRIPTION)
 
     parser.add_argument('-v', '--verbose',
-        dest='verbose_count',
+        dest='verbose_level',
         action='count',
         default=0,
         help='Output verbosity (incremental).')
@@ -230,14 +226,16 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    print("Verbose Level: %d" % args.verbose_level)
+
     if args.interface:
         check_input_network_interfaces(args.interface)
-        doit_live_capture(args.interface, args.verbose_count)
+        doit_live_capture(args.interface, args.verbose_level)
 
     if args.r:
         check_input_pcap_capture_files(args.r)
-        doit_pcap_files(args.r, args.concurrent, args.verbose_count)
+        doit_pcap_files(args.r, args.concurrent, args.verbose_level)
 
     if args.R:
         check_input_pcap_capture_files(args.R)
-        doit_pcap_files(args.R, args.concurrent, args.verbose_count)
+        doit_pcap_files(args.R, args.concurrent, args.verbose_level)

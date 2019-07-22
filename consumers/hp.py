@@ -29,6 +29,9 @@ from helpers.Processes import WigProcess
 from impacket import ImpactDecoder
 from impacket import dot11
 
+import cProfile
+import pstats
+
 
 class HewlettPackardVendorSpecificTypeZero(WigProcess):
     """
@@ -63,7 +66,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         'USB connected to host': 0b00000000000000000000000000010000,
     }
 
-    def __init__(self, frames_queue):
+    def __init__(self, frames_queue, verbose_level):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
@@ -73,6 +76,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         self.decoder.FCS_at_end(False)
 
         self.__tag_stats__ = dict()
+        self.__verbose_level__ = verbose_level
 
     def get_frame_type_filter(self):
         """
@@ -91,6 +95,9 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         """
         TODO: Documentation
         """
+        p = cProfile.Profile()
+        p.enable()
+
         self.set_process_title()
 
         try:
@@ -121,6 +128,9 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
+
+        p.disable()
+        pstats.Stats(p).sort_stats('cumulative').print_stats(30)
 
         # for tag_id, count in self.__tag_stats__.items():
             # if tag_id in ieee80211.tag_strings.keys():

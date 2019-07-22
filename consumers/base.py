@@ -32,6 +32,7 @@ from producers.base import FINITE_TYPE, INFINITE_TYPE
 from wps import WiFiProtectedSetup
 from uncommon import InformationElementsStats
 from hp import HewlettPackardVendorSpecificTypeZero
+from awdl import AppleWirelessDirectLink
 
 
 class Mediator(WigProcess):
@@ -40,17 +41,20 @@ class Mediator(WigProcess):
     type/subtype IEEE 802.11 frames to different frame processing classes.
     """
 
-    def __init__(self, frames_queue, producer_type, passive=True):
+    def __init__(self, frames_queue, producer_type, verbose_level, passive=True):
         WigProcess.__init__(self)
         self.__queue__ = frames_queue
         self.__stop__ = Event()
         self.__producer_type__ = producer_type
         self.__passive__ = passive
+        self.__verbose_level__ = verbose_level
         self.__timeout_event__ = Event()
-        self.consumers_list = [FramesStats,
-                               InformationElementsStats,
-                               WiFiProtectedSetup,
-                               HewlettPackardVendorSpecificTypeZero]
+        # self.consumers_list = [FramesStats,
+        #                        InformationElementsStats,
+        #                        WiFiProtectedSetup,
+        #                        HewlettPackardVendorSpecificTypeZero,
+        #                        AppleWirelessDirectLink]
+        self.consumers_list = [AppleWirelessDirectLink]
 
     def run(self):
         """
@@ -72,7 +76,7 @@ class Mediator(WigProcess):
         consumer_list = list()
         for consumer in self.consumers_list:
             consumer_queue = Queue()
-            consumer_instance = consumer(consumer_queue)
+            consumer_instance = consumer(consumer_queue, self.__verbose_level__)
             consumer_instance.start()
             consumer_list.append((consumer_instance, consumer_queue))
 
@@ -145,7 +149,7 @@ class Mediator(WigProcess):
         consumer_list = list()
         for consumer in self.consumers_list:
             consumer_queue = Queue()
-            consumer_instance = consumer(consumer_queue)
+            consumer_instance = consumer(consumer_queue, self.__verbose_level__)
             consumer_instance.start()
             consumer_list.append((consumer_instance, consumer_queue))
 
@@ -210,11 +214,13 @@ class FramesStats(WigProcess):
     TODO: Documentation
     """
 
-    def __init__(self, frames_queue):
+    def __init__(self, frames_queue, verbose_level):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
         self.__queue__ = frames_queue
+
+        self.__verbose_level__ = verbose_level
 
         self.__total_frames_count__ = 0
         self.__type_management_count__ = 0

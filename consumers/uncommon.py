@@ -60,7 +60,7 @@ class InformationElementsStats(WigProcess):
         dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_RESPONSE: 6,
     }
 
-    def __init__(self, frames_queue):
+    def __init__(self, frames_queue, verbose_level):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
@@ -70,6 +70,7 @@ class InformationElementsStats(WigProcess):
         self.decoder.FCS_at_end(False)
 
         self.__tag_stats__ = dict()
+        self.__verbose_level__ = verbose_level
 
     def get_frame_type_filter(self):
         """
