@@ -38,7 +38,7 @@ class WiFiProtectedSetup(WigProcess):
     TODO: Documentation
     """
 
-    __module_name__ = "WPS (WiFi Protected Setup"
+    __module_name__ = "WPS (WiFi Protected Setup)"
 
     def __init__(self, frames_queue):
         WigProcess.__init__(self)
