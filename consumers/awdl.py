@@ -89,7 +89,7 @@ class AppleWirelessDirectLink(WigProcess):
     service_request_label = 'service request'
     service_response_label = 'service response'
 
-    def __init__(self, frames_queue, verbose_level):
+    def __init__(self, frames_queue):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
@@ -99,7 +99,6 @@ class AppleWirelessDirectLink(WigProcess):
         self.decoder.FCS_at_end(False)
 
         self.__devices__ = dict()
-        self.__verbose_level__ = verbose_level
 
     def get_frame_type_filter(self):
         """
@@ -160,17 +159,16 @@ class AppleWirelessDirectLink(WigProcess):
                         info_items['Class'] = __data[self.class_label]
                     if self.country_label in __data:
                         info_items['Country'] = __data[self.country_label]
-                    if self.__verbose_level__ > writer.OUTPUT_DEBUG:
-                        if self.service_request_label in __data:
-                            idx = 0
-                            for item in __data[self.service_request_label]:
-                                info_items['Service Request %d' % idx] = repr(item)
-                                idx += 1
-                        if self.service_response_label in __data:
-                            idx = 0
-                            for item in __data[self.service_response_label]:
-                                info_items['Service Response %d' % idx] = repr(item)
-                                idx += 1
+                    if self.service_request_label in __data:
+                        idx = 0
+                        for item in __data[self.service_request_label]:
+                            info_items['Service Request %d' % idx] = repr(item)
+                            idx += 1
+                    if self.service_response_label in __data:
+                        idx = 0
+                        for item in __data[self.service_response_label]:
+                            info_items['Service Response %d' % idx] = repr(item)
+                            idx += 1
                     writer.print_device_information(device_mac.upper(), self.__module_name__, info_items)
 
                     # Apple Devices has MAC randomization, so we should use the device name to identify them.

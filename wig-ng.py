@@ -22,7 +22,7 @@ import os
 import time
 import argparse
 
-from multiprocessing import Queue, TimeoutError
+from multiprocessing import Queue, Value, TimeoutError
 
 from consumers.base import Mediator
 from producers.base import LiveNetworkCapture
@@ -76,7 +76,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
     try:
         fq = Queue()
 
-        mediator = Mediator(fq, OfflineNetworkCapture.PRODUCER_TYPE, verbose_level)
+        mediator = Mediator(fq, OfflineNetworkCapture.PRODUCER_TYPE)
 
         producers_list = list()
         while files_list:
@@ -147,7 +147,7 @@ def doit_live_capture(interfaces_list, verbose_level):
             producers_list.append(producer)
             producer.start()
 
-        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE, verbose_level)
+        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE)
         mediator.start()
 
         for producer in producers_list:
@@ -225,8 +225,6 @@ if __name__ == "__main__":
         help='Directory with PCAP capture files.')
 
     args = parser.parse_args()
-
-    print("Verbose Level: %d" % args.verbose_level)
 
     if args.interface:
         check_input_network_interfaces(args.interface)

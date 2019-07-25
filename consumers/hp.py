@@ -24,6 +24,7 @@ from Queue import Empty
 from multiprocessing import Event
 
 from helpers import ieee80211
+from helpers.output import writer
 from helpers.Processes import WigProcess
 
 from impacket import ImpactDecoder
@@ -37,6 +38,8 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
     """
     TODO: Documentation
     """
+
+    __module_name__ = "HP Printer Vendor Specific"
 
     hp_ie_oui = "\x08\x00\x09"
 
@@ -66,7 +69,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         'USB connected to host': 0b00000000000000000000000000010000,
     }
 
-    def __init__(self, frames_queue, verbose_level):
+    def __init__(self, frames_queue):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
@@ -76,7 +79,6 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         self.decoder.FCS_at_end(False)
 
         self.__tag_stats__ = dict()
-        self.__verbose_level__ = verbose_level
 
     def get_frame_type_filter(self):
         """
@@ -127,7 +129,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         except KeyboardInterrupt:
             pass
 
-    def process_hp_ie(self, data, debug=False):
+    def process_hp_ie(self, data, info_dict):
         """Process HP wireless printers information element."""
         index = 0
         while index < len(data):
@@ -136,85 +138,70 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
             index += 2
 
             if tag_length > len(data) - index:
-                if debug:
-                    print("Invalid Tag.")
                 continue
 
             if tag_id == self.HP_TLV_TYPES['Status BitField']:
                 if tag_length != 4:
-                    if debug:
-                        print("Invalid Status BitField.")
                     continue
                 aux = data[index:index + 4]
                 bitfield = struct.unpack(">I", aux)[0]
-                print("Status Bitfield: %r - %d" % (aux, bitfield))
                 if (bitfield & self.STATUS_BITFIELD['Station is on']) != 0:
-                    print(" - Station is on.")
+                    info_dict['Station State'] = "On"
                 else:
-                    print(" - Station is off.")
+                    info_dict['Station State'] = "Off"
                 if (bitfield & self.STATUS_BITFIELD['Station is configured']) != 0:
-                    print(" - Station is configured.")
+                    info_dict['Station Configured'] = "True"
                 else:
-                    print(" - Station is not configured.")
+                    info_dict['Station Configured'] = "False"
                 if (bitfield & self.STATUS_BITFIELD['Station is connected']) != 0:
-                    print(" - Station is connected.")
+                    info_dict['Station is Connected'] = "True"
                 else:
-                    print(" - Station is not connected.")
+                    info_dict['Station is Connected'] = "False"
                 if (bitfield & self.STATUS_BITFIELD['Station supports 5GHz']) != 0:
-                    print(" - Station supports 5GHz.")
+                    info_dict['Station Supports 5GHz'] = "True"
                 else:
-                    print(" - Station doesn't support 5GHz.")
+                    info_dict['Station Supports 5GHz'] = "False"
                 if (bitfield & self.STATUS_BITFIELD['USB connected to host']) != 0:
-                    print(" - USB connected to host.")
+                    info_dict['USB Connected'] = "True"
                 else:
-                    print(" - USB is not connected to host.")
+                    info_dict['USB Connected'] = "False"
                 index += 4
             elif tag_id == self.HP_TLV_TYPES['AWC Version']:
                 if tag_length != 2:
-                    if debug:
-                        print("Invalid AWC Version.")
                     continue
                 awc_major = struct.unpack("B", data[index])[0]
                 awc_minor = struct.unpack("B", data[index + 1])[0]
-                print("AWC version: %d.%d" % (awc_major, awc_minor))
+                info_dict['AWC version'] = "%d.%d" % (awc_major, awc_minor)
                 index += 2
             elif tag_id == self.HP_TLV_TYPES['Model Name String']:
                 model_name = str(data[index:index+tag_length])
                 index += tag_length
-                print("Model Name: %s" % model_name.replace("\x00", ""))
+                info_dict['Model Name'] = model_name.replace("\x00", "")
             elif tag_id == self.HP_TLV_TYPES['Product SKU']:
                 product_sku = str(data[index:index + tag_length])
                 index += tag_length
-                print("Product SKU: %s" % product_sku.replace("\x00", ""))
+                info_dict['Product SKU'] = product_sku.replace("\x00", "")
             elif tag_id == self.HP_TLV_TYPES['Device Serial Number']:
                 serial_number = str(data[index:index + tag_length])
                 index += tag_length
-                print("Serial Number: %s" % serial_number.replace("\x00", ""))
+                info_dict['Serial Number'] = serial_number.replace("\x00", "")
             elif tag_id == self.HP_TLV_TYPES['Device UUID']:
                 if tag_length != 16:
-                    if debug:
-                        print("Invalid Device UUID.")
                     continue
                 uuid = list()
                 for byte in data[index:index + tag_length]:
                     uuid.append("%02X" % ord(byte))
-                print("UUID: %s" % "".join(uuid))
+                info_dict['UUID'] = "".join(uuid)
                 index += tag_length
             elif tag_id == self.HP_TLV_TYPES['Device Station IPv4 Address']:
                 if tag_length != 4:
-                    if debug:
-                        print("Print Invalid Device Station IPv4 Address")
                     continue
                 octets = list()
                 for byte in data[index:index + tag_length]:
                     octets.append("%d" % ord(byte))
-                print("IPv4 Address: %s" % ".".join(octets))
+                info_dict['IPv4 Address'] = ".".join(octets)
                 index += tag_length
             else:
-                if debug:
-                    print("Tag ID: %02X" % tag_id)
-                    print("Tag Length: %d" % tag_length)
-                    print("Tag Value: %s" % repr(data[index:index + tag_length]))
                 index += tag_length
 
     def process_frame(self, frame_ctl, mgt_frame):
@@ -241,13 +228,12 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                     oui = item[0]
                     if oui == self.hp_ie_oui:
                         ie_data = item[1]
-                        print "BSSID: %s" % device_mac
-                        print "SSID: %s" % ssid
-                        print "Channel: %d" % channel
-                        print "Security: %s" % security
-                        print "-" * 20
-                        self.process_hp_ie(ie_data)
-                        print "-" * 70
+                        info_items = dict()
+                        info_items['SSID'] = ssid
+                        info_items['Channel'] = channel
+                        info_items['Security'] = security
+                        self.process_hp_ie(ie_data, info_items)
+                        writer.print_device_information(device_mac.upper(), self.__module_name__, info_items)
 
     def shutdown(self):
         """

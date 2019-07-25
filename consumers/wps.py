@@ -26,6 +26,7 @@ from multiprocessing import Event
 
 from helpers import wps
 from helpers import ieee80211
+from helpers.output import writer
 from helpers.Processes import WigProcess
 
 from impacket import ImpactDecoder
@@ -36,6 +37,8 @@ class WiFiProtectedSetup(WigProcess):
     """
     TODO: Documentation
     """
+
+    __module_name__ = "WPS (WiFi Protected Setup"
 
     def __init__(self, frames_queue):
         WigProcess.__init__(self)
@@ -121,21 +124,20 @@ class WiFiProtectedSetup(WigProcess):
                     length = struct.pack("B", len(oui + data))
                     raw_data = wps.WPSInformationElement.VENDOR_SPECIFIC_IE_ID + length + oui + data
                     if oui == wps.WPSInformationElement.WPS_OUI and vs_type == wps.WPSInformationElement.WPS_OUI_TYPE:
-                        print "BSSID: %s" % device_mac
+                        info_items = dict()
                         if ssid:
-                            print "SSID: %s" % ssid
+                            info_items['SSID'] = ssid
                         if channel:
-                            print "Channel: %d" % channel
-                        print "Security: %s" % security
-                        print "-" * 20
+                            info_items['Channel'] = channel
+                        info_items['Security'] = security
                         ie = wps.WPSInformationElement(raw_data)
                         for element in ie.get_elements():
                             k, v = element
                             if all(c in string.printable for c in v):
-                                print "%s: %s" % (string.capwords(k), v)
+                                info_items[string.capwords(k)] = v
                             else:
-                                print "%s: %r" % (string.capwords(k), v)
-                        print "-" * 70
+                                info_items[string.capwords(k)] = repr(v)
+                        writer.print_device_information(device_mac.upper(), self.__module_name__, info_items)
 
     def shutdown(self):
         """

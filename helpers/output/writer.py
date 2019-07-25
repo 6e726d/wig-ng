@@ -28,7 +28,8 @@ def print_device_information(mac_address, module_name, elements):
     """
     Function that prints a device information. The elements parameter is a dictionary object.
     """
-    print("MAC Address: %s" % mac_address)
+    # print("MAC Address: %s" % mac_address)
+    print(mac_address)
     print("Module: %s" % module_name)
     for title, value in elements.items():
         print("%s: %s" % (title, value))
