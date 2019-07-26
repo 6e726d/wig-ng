@@ -89,11 +89,12 @@ class AppleWirelessDirectLink(WigProcess):
     service_request_label = 'service request'
     service_response_label = 'service response'
 
-    def __init__(self, frames_queue):
+    def __init__(self, frames_queue, output_queue):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
         self.__queue__ = frames_queue
+        self.__output__ = output_queue
 
         self.decoder = ImpactDecoder.Dot11Decoder()
         self.decoder.FCS_at_end(False)
@@ -169,7 +170,8 @@ class AppleWirelessDirectLink(WigProcess):
                         for item in __data[self.service_response_label]:
                             info_items['Service Response %d' % idx] = repr(item)
                             idx += 1
-                    writer.print_device_information(device_mac.upper(), self.__module_name__, info_items)
+                    aux = writer.get_device_information_dict(device_mac.upper(), self.__module_name__, info_items)
+                    self.__output__.put(aux)
 
                     # Apple Devices has MAC randomization, so we should use the device name to identify them.
                     self.__devices__[device_mac] = __data[self.name_label]

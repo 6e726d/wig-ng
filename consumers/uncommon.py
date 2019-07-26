@@ -22,6 +22,7 @@ import struct
 
 from Queue import Empty
 from multiprocessing import Event
+from collections import OrderedDict
 
 from helpers import ieee80211
 from helpers.Processes import WigProcess
@@ -34,6 +35,8 @@ class InformationElementsStats(WigProcess):
     """
     TODO: Documentation
     """
+
+    __module_name__ = "Information Element Stats"
 
     SUBTYPE_WHITELIST = [
         dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_ASSOCIATION_REQUEST,  # 00 - 00
@@ -60,11 +63,12 @@ class InformationElementsStats(WigProcess):
         dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_RESPONSE: 6,
     }
 
-    def __init__(self, frames_queue):
+    def __init__(self, frames_queue, output_queue):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
         self.__queue__ = frames_queue
+        self.__output__ = output_queue
 
         self.decoder = ImpactDecoder.Dot11Decoder()
         self.decoder.FCS_at_end(False)
@@ -96,14 +100,14 @@ class InformationElementsStats(WigProcess):
         self.set_process_title()
 
         try:
-            self.malformed = 0
+            self.__malformed__ = 0
             while not self.__stop__.is_set():
                 try:
                     frame = self.__queue__.get(timeout=5)
                     try:
                         self.decoder.decode(frame)
                     except Exception:
-                        self.malformed +=1
+                        self.__malformed__ +=1
                         continue
                     frame_control = self.decoder.get_protocol(dot11.Dot11)
                     if frame_control.get_subtype() in self.SUBTYPE_WHITELIST:
@@ -122,14 +126,15 @@ class InformationElementsStats(WigProcess):
         except KeyboardInterrupt:
             pass
 
+        aux =  OrderedDict()
+        aux['Module'] = self.__module_name__
         for tag_id, count in self.__tag_stats__.items():
             if tag_id in ieee80211.tag_strings.keys():
-                print("TAG: %02X [%s] - %d" % (tag_id,
-                                               ieee80211.tag_strings[tag_id],
-                                               count))
+                aux['TAG %02X [%s]' % (tag_id, ieee80211.tag_strings[tag_id])] = count
             else:
-                print("TAG: %02X - %d" % (tag_id, count))
-        print("Malformed frames: %d" % self.malformed)
+                aux['TAG %02X' % tag_id] = count
+        aux['Malformed frames'] = self.__malformed__
+        self.__output__.put(aux)
 
     def process_body(self, child, offset, raw):
         """
@@ -138,23 +143,25 @@ class InformationElementsStats(WigProcess):
         buff = child.get_header_as_string()[offset:]
         try:
             ies = InformationElementsStats.get_ie_list(buff)
+            if ies:
+                for ie in ies:
+                    tag, length, value = ie
+                    # if tag not in ieee80211.tag_strings.keys():
+                        # print("TAG: %02X" % tag)
+                        # print("LEN: %02X" % length)
+                        # print("%r" % value)
+                        # print(repr(buff))
+                    # We avoid adding information elements with invalid length.
+                    if length == len(value) and length > 0:
+                        if tag not in self.__tag_stats__.keys():
+                            self.__tag_stats__[tag] = 1
+                        else:
+                            self.__tag_stats__[tag] += 1
         except Exception, e:
-            print("%s" % e)
-            print(repr(buff))
-        if ies:
-            for ie in ies:
-                tag, length, value = ie
-                if tag not in ieee80211.tag_strings.keys():
-                    print("TAG: %02X" % tag)
-                    print("LEN: %02X" % length)
-                    print("%r" % value)
-                    print(repr(buff))
-                # We avoid adding information elements with invalid length.
-                if length == len(value) and length > 0:
-                    if tag not in self.__tag_stats__.keys():
-                        self.__tag_stats__[tag] = 1
-                    else:
-                        self.__tag_stats__[tag] += 1
+            pass
+            # print("Exception [%s]:" % self.__module_name__)
+            # print("%s" % e)
+            # print(repr(buff))
 
     @staticmethod
     def get_ie_list(buff):

@@ -18,19 +18,22 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from collections import OrderedDict
+
 # Verbose Count
 OUTPUT_INFO = 0
 OUTPUT_VERBOSE = 1
 OUTPUT_DEBUG = 2
 
 
-def print_device_information(mac_address, module_name, elements):
+def get_device_information_dict(mac_address, module_name, elements):
     """
-    Function that prints a device information. The elements parameter is a dictionary object.
+    Function that returns an ordered dictionary with the device information.
     """
     # print("MAC Address: %s" % mac_address)
-    print(mac_address)
-    print("Module: %s" % module_name)
+    aux = OrderedDict()
+    aux[""] = mac_address
+    aux["Module"] = module_name
     for title, value in elements.items():
-        print("%s: %s" % (title, value))
-    print("")
+        aux[title] = value
+    return aux

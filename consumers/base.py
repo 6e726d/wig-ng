@@ -23,9 +23,11 @@ import datetime
 import traceback
 
 from Queue import Empty
+from collections import OrderedDict
 from multiprocessing import Event, Queue, Value, TimeoutError
 
 from helpers import ieee80211
+from helpers.output import writer
 from helpers.Processes import WigProcess
 from producers.base import FINITE_TYPE, INFINITE_TYPE
 
@@ -49,10 +51,10 @@ class Mediator(WigProcess):
         self.__passive__ = passive
         self.__timeout_event__ = Event()
         self.consumers_list = [FramesStats,
-                               InformationElementsStats,
-                               WiFiProtectedSetup,
-                               HewlettPackardVendorSpecificTypeZero,
-                               AppleWirelessDirectLink]
+                              InformationElementsStats,
+                              WiFiProtectedSetup,
+                              HewlettPackardVendorSpecificTypeZero,
+                              AppleWirelessDirectLink]
 
     def run(self):
         """
@@ -60,10 +62,23 @@ class Mediator(WigProcess):
         """
         self.set_process_title()
 
+        # Initialize Output Manager
+        self.__output_queue__ = Queue()
+        self.__output_manager__ = OutputManager(self.__output_queue__)
+        self.__output_manager__.start()
+
         if self.__producer_type__ == INFINITE_TYPE:
             self.run_from_infinite_producers()
         else:
             self.run_from_finite_producers()
+
+        # Wait for Output Manager
+        while True:
+            if self.__output_manager__.is_alive() and self.__output_queue__.empty():
+               self.__output_manager__.shutdown()
+               self.__output_manager__.join()
+               break
+            time.sleep(1)
 
     def run_from_finite_producers(self):
         """
@@ -74,7 +89,7 @@ class Mediator(WigProcess):
         consumer_list = list()
         for consumer in self.consumers_list:
             consumer_queue = Queue()
-            consumer_instance = consumer(consumer_queue)
+            consumer_instance = consumer(consumer_queue, self.__output_queue__)
             consumer_instance.start()
             consumer_list.append((consumer_instance, consumer_queue))
 
@@ -92,7 +107,6 @@ class Mediator(WigProcess):
                         # pending to start. We need to wait.
                         frame = self.__queue__.get(timeout=300)
                 except Empty:
-                    print("Empty Queue.")
                     break
                 for item in consumer_list:
                     consumer = item[0]
@@ -115,17 +129,15 @@ class Mediator(WigProcess):
         finally:
             # We need to wait for consumers to finish.
             print("Waiting for modules to finish. Please wait...")
-            # print("Mediator Finally")
-            # print("Consumer List: %r" % consumer_list)
             while True:
                 try:
                     if consumer_list:
-                        print("%r" % consumer_list)
+                        # print("%r" % consumer_list)
                         for item in consumer_list:
                             consumer = item[0]
                             consumer_queue = item[1]
-                            print(consumer.__class__.__name__)
-                            print(consumer_queue.qsize())
+                            # print(consumer.__class__.__name__)
+                            # print(consumer_queue.qsize())
                             if consumer_queue.empty():
                                 consumer.shutdown()
                                 consumer_list.remove(item)
@@ -176,7 +188,7 @@ class Mediator(WigProcess):
         except Exception, e:
             print(str(e))
         finally:
-            print("Mediator Finally")
+            # print("Mediator Finally")
             for item in consumer_list:
                 consumer = item[0]
                 if consumer.is_alive():
@@ -194,7 +206,6 @@ class Mediator(WigProcess):
         """
         This method sets the __stop__ event to stop the process.
         """
-        print("Mediator - shutdown.")
         self.__stop__.set()
 
     def timeout_event(self):
@@ -203,8 +214,52 @@ class Mediator(WigProcess):
         This was added to fix the race condition that happends between a new
         producer starts and the queue timeout monitoring in the mediator.
         """
-        print("Mediator timeout event!!!")
         self.__timeout_event__.set()
+
+
+class OutputManager(WigProcess):
+    """
+    TODO: Documentation
+    """
+
+    def __init__(self, output_queue):
+        WigProcess.__init__(self)
+        self.__stop__ = Event()
+        self.__queue__ = output_queue
+
+    def run(self):
+        """
+        TODO: Documentation
+        """
+        self.set_process_title()
+
+        try:
+            while not self.__stop__.is_set():
+                try:
+                    output = self.__queue__.get(timeout=5)
+                    self.print_item(output)
+                except Empty:
+                    pass
+        # Ignore SIGINT signal, this is handled by parent.
+        except KeyboardInterrupt:
+            pass
+
+    def print_item(self, output_items):
+        """
+        TODO: Documentation
+        """
+        print("")  # Add empty line on top of item output.
+        for k, v in output_items.items():
+            if len(k.strip()) == 0:
+                print("%s" % v)
+            else:
+                print("%s: %s" % (k, v))
+
+    def shutdown(self):
+        """
+        This method sets the __stop__ event to stop the process.
+        """
+        self.__stop__.set()
 
 
 class FramesStats(WigProcess):
@@ -212,11 +267,14 @@ class FramesStats(WigProcess):
     TODO: Documentation
     """
 
-    def __init__(self, frames_queue):
+    __module_name__ = "Frame Stats"
+
+    def __init__(self, frames_queue, output_queue):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
         self.__queue__ = frames_queue
+        self.__output__ = output_queue
         self.__total_frames_count__ = 0
         self.__type_management_count__ = 0
         self.__type_control_count__ = 0
@@ -250,12 +308,15 @@ class FramesStats(WigProcess):
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
-        
-        print("Frames: %d" % self.__total_frames_count__)
-        print("Management Frames: %d" % self.__type_management_count__)
-        print("Control Frames: %d" % self.__type_control_count__)
-        print("Data Frames: %d" % self.__type_data_count__)
-        print("Unknown Frames: %d" % self.__type_unknown_count__)
+
+        aux =  OrderedDict()
+        aux['Module'] = self.__module_name__
+        aux['Frames'] = self.__total_frames_count__
+        aux['Management Frames'] = self.__type_management_count__
+        aux['Control Frames'] = self.__type_control_count__
+        aux['Data Frames'] = self.__type_data_count__
+        aux['Unknown Frames'] = self.__type_unknown_count__
+        self.__output__.put(aux)
 
     def get_frame_type_filter(self):
         """

@@ -30,9 +30,6 @@ from helpers.Processes import WigProcess
 from impacket import ImpactDecoder
 from impacket import dot11
 
-import cProfile
-import pstats
-
 
 class HewlettPackardVendorSpecificTypeZero(WigProcess):
     """
@@ -69,11 +66,12 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         'USB connected to host': 0b00000000000000000000000000010000,
     }
 
-    def __init__(self, frames_queue):
+    def __init__(self, frames_queue, output_queue):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
         self.__queue__ = frames_queue
+        self.__output__ = output_queue
 
         self.decoder = ImpactDecoder.Dot11Decoder()
         self.decoder.FCS_at_end(False)
@@ -233,7 +231,8 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                         info_items['Channel'] = channel
                         info_items['Security'] = security
                         self.process_hp_ie(ie_data, info_items)
-                        writer.print_device_information(device_mac.upper(), self.__module_name__, info_items)
+                        aux = writer.get_device_information_dict(device_mac.upper(), self.__module_name__, info_items)
+                        self.__output__.put(aux)
 
     def shutdown(self):
         """
