@@ -35,6 +35,7 @@ from wps import WiFiProtectedSetup
 from uncommon import InformationElementsStats
 from hp import HewlettPackardVendorSpecificTypeZero
 from awdl import AppleWirelessDirectLink
+from p2p import WiFiDirect
 
 
 class Mediator(WigProcess):
@@ -53,6 +54,7 @@ class Mediator(WigProcess):
         self.consumers_list = [FramesStats,
                               InformationElementsStats,
                               WiFiProtectedSetup,
+                              WiFiDirect,
                               HewlettPackardVendorSpecificTypeZero,
                               AppleWirelessDirectLink]
 

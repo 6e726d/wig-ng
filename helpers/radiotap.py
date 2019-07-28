@@ -43,6 +43,10 @@ F_FCS_AT_END_MASK = 0b00010000
 SUPPORTED_VERSION = 0
 
 
+class InvalidRadiotap(Exception):
+    pass
+
+
 def get_version(buff):
     """
     Returns header version.
@@ -52,7 +56,7 @@ def get_version(buff):
     idx = 0
     version = ord(buff[idx])
     if version != SUPPORTED_VERSION:
-        raise ValueError("Invalid Radiotap version.")
+        raise InvalidRadiotap("Invalid Radiotap version.")
     return version
 
 def get_length(buff):
@@ -103,4 +107,4 @@ def has_FCS(buff):
             offset += MAC_TIMESTAMP_SIZE
         flags = ord(buff[offset])
         return (flags & F_FCS_AT_END_MASK) >> 4
-    raise ValueError("No Radiotap Flags!")
+    raise InvalidRadiotap("Invalid Radiotap Header.")

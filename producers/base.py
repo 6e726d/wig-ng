@@ -97,6 +97,8 @@ class LiveNetworkCapture(WigProcess):
                         else:
                             frame = frame[offset:]
                     self.__frames_queue__.put(frame)
+            except radiotap.InvalidRadiotap:
+                pass
             # Ignore SIGINT signal, this is handled by parent.
             except KeyboardInterrupt:
                 pass
@@ -167,6 +169,8 @@ class OfflineNetworkCapture(WigProcess):
                     # next method of the pcap descriptor we have reached the end
                     # of the pcap capture file.
                     break
+            except radiotap.InvalidRadiotap:
+                pass
             # Ignore SIGINT signal, this is handled by parent.
             except KeyboardInterrupt:
                 pass
