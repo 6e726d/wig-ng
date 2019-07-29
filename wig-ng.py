@@ -34,6 +34,9 @@ from helpers.output import writer
 import pcapy
 
 
+APP_NAME = "Wig-ng"
+VERSION_MAJOR = 0
+VERSION_MINOR = 1
 DESCRIPTION = ""  # TODO: Add application description
 
 SUPPORTED_EXTENSIONS = ["cap", "pcap"]
@@ -45,10 +48,10 @@ def check_input_network_interfaces(interfaces_list):
     """
     for interface in interfaces_list:
         if interface not in interfaces.get_ieee80211_network_interfaces():
-            print("%s is not a valid IEEE 802.11 interface." % interface)
+            print("Error: %s is not a valid IEEE 802.11 interface." % interface)
             raise Exception("Network Interface Error.")
         if not interfaces.is_monitor_mode_set(interface):
-            print("%s is not on monitor mode." % interface)
+            print("Error: %s is not on monitor mode." % interface)
             raise Exception("Network Interface Error.")
 
 
@@ -58,16 +61,16 @@ def check_input_pcap_capture_files(files_list):
     """
     for file in files_list:
         if not os.path.exists(file):
-            print("%s does not exists." % file)
+            print("Error: %s does not exists." % file)
             raise Exception("PCAP Capture File Error.")
         if not os.path.isfile(file):
-            print("%s is not a file." % file)
+            print("Error: %s is not a file." % file)
             raise Exception("PCAP Capture File Error.")
         pd = pcapy.open_offline(file)
         datalink = pd.datalink()
         if datalink not in [interfaces.DLT_IEEE802_11,
                             interfaces.DLT_IEEE802_11_RADIO]:
-            print("%s is not a valid IEEE 802.11 network capture file." % file)
+            print("Error: %s is not a valid IEEE 802.11 network capture file." % file)
             raise Exception("PCAP Capture File Error.")
 
 
@@ -87,7 +90,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
             if len(producers_list) < concurrent_files:
                 producer = OfflineNetworkCapture(_file, fq)
                 if verbose_level > writer.OUTPUT_INFO:
-                    print("%s - %s" % (producer, _file))
+                    print("Producer: %s - %s" % (producer, _file))
                 producers_list.append(producer)
                 producer.start()
                 files_list.remove(_file)
@@ -98,7 +101,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
 
             for producer in producers_list:
                 if not producer.is_alive():
-                    print("%s finished" % producer)
+                    print("Producer: %s finished" % producer)
                     producers_list.remove(producer)
 
             # To avoid 100% CPU usage
@@ -124,10 +127,10 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
             if mediator.is_alive():
                 mediator.terminate()
     except KeyboardInterrupt:
-        print("Caugth Ctrl+C...")
+        print("\nCaugth Ctrl+C...")
         # Graceful shutdown on all producers and consumers.
         for producer in producers_list:
-            print("Stoping %s" % producer)
+            print("\nStoping %s" % producer)
             producer.shutdown()
             producer.join(10)
             producer.terminate()
@@ -147,7 +150,7 @@ def doit_live_capture(interfaces_list, verbose_level):
         for interface in interfaces_list:
             producer = LiveNetworkCapture(interface, fq)
             if verbose_level > writer.OUTPUT_INFO:
-                print("%s - %s" % (producer, interface))
+                print("\n%s - %s" % (producer, interface))
             producers_list.append(producer)
             producer.start()
 
@@ -161,13 +164,16 @@ def doit_live_capture(interfaces_list, verbose_level):
 
         mediator.shutdown()
     except KeyboardInterrupt:
-        print("Caugth Ctrl+C...")
+        print("\nCaugth Ctrl+C...")
         # Graceful shutdown on all producers and consumers.
         for producer in producers_list:
             producer.shutdown()
-            producer.join()
+            producer.join(10)
+            print("Joined %s" % producer.__class__.__name__)
         mediator.shutdown()
-        mediator.join()
+        print("Waiting for mediator...")
+        mediator.join(10)
+        mediator.terminate()
 
 
 class PcapCatureDir(argparse.Action):
@@ -183,7 +189,7 @@ class PcapCatureDir(argparse.Action):
         if os.access(_dir, os.R_OK):
             setattr(namespace, self.dest, _dir)
         else:
-            parser.error("%s is not a readable dir" % _dir)
+            parser.error("Error: %s is not a readable dir" % _dir)
 
         has_pcap_files = False
         _files = list()
@@ -194,7 +200,7 @@ class PcapCatureDir(argparse.Action):
                     has_pcap_files = True
                     _files.append(os.path.join(root, filename))
         if not has_pcap_files:
-            parser.error("%s doesn't contain pcap files." % _dir)
+            parser.error("Error: %s doesn't contain pcap files." % _dir)
         else:
             setattr(namespace, self.dest, _files)
 
