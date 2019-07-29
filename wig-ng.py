@@ -72,7 +72,9 @@ def check_input_pcap_capture_files(files_list):
 
 
 def doit_pcap_files(files_list, concurrent_files, verbose_level):
-
+    """
+    TODO: Add documentation.
+    """
     try:
         fq = Queue()
 
@@ -135,7 +137,9 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
 
 
 def doit_live_capture(interfaces_list, verbose_level):
-
+    """
+    TODO: Add documentation.
+    """
     try:
         fq = Queue()
 

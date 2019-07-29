@@ -127,19 +127,16 @@ class Mediator(WigProcess):
         except KeyboardInterrupt:
             pass
         except Exception, e:
-            print(str(e))
+            self.__output_queue__.put({'Exception': str(e)})
         finally:
             # We need to wait for consumers to finish.
-            print("Waiting for modules to finish. Please wait...")
+            self.__output_queue__.put({' ': 'Waiting for modules to finish. Please wait...'})
             while True:
                 try:
                     if consumer_list:
-                        # print("%r" % consumer_list)
                         for item in consumer_list:
                             consumer = item[0]
                             consumer_queue = item[1]
-                            # print(consumer.__class__.__name__)
-                            # print(consumer_queue.qsize())
                             if consumer_queue.empty():
                                 consumer.shutdown()
                                 consumer_list.remove(item)
@@ -150,7 +147,7 @@ class Mediator(WigProcess):
                 # except KeyboardInterrupt:
                     # traceback.print_stack()
                 except Exception, e:
-                    print("%s" % str(e))
+                    self.__output_queue__.put({'Exception': str(e)})
 
     def run_from_infinite_producers(self):
         """
@@ -161,7 +158,7 @@ class Mediator(WigProcess):
         consumer_list = list()
         for consumer in self.consumers_list:
             consumer_queue = Queue()
-            consumer_instance = consumer(consumer_queue)
+            consumer_instance = consumer(consumer_queue, self.__output_queue__)
             consumer_instance.start()
             consumer_list.append((consumer_instance, consumer_queue))
 
@@ -188,9 +185,8 @@ class Mediator(WigProcess):
         except KeyboardInterrupt:
             pass
         except Exception, e:
-            print(str(e))
+            self.__output_queue__.put({'Exception': str(e)})
         finally:
-            # print("Mediator Finally")
             for item in consumer_list:
                 consumer = item[0]
                 if consumer.is_alive():
@@ -200,8 +196,8 @@ class Mediator(WigProcess):
                         consumer.join(30)
                     except TimeoutError:
                         # Force consumer to terminate.
-                        print("Forcing %s to terminate." % \
-                              consumer.__class__.__name__)
+                        self.__output_queue__.put({'Timeout Error':
+                              'Forcing %s to terminate.' % consumer.__class__.__name__})
                         consumer.terminate()
 
     def shutdown(self):

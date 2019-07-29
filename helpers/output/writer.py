@@ -30,7 +30,6 @@ def get_device_information_dict(mac_address, module_name, elements):
     """
     Function that returns an ordered dictionary with the device information.
     """
-    # print("MAC Address: %s" % mac_address)
     aux = OrderedDict()
     aux[""] = mac_address
     aux["Module"] = module_name

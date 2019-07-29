@@ -94,8 +94,7 @@ class WiFiProtectedSetup(WigProcess):
                 except Empty:
                     pass
                 except Exception, e:
-                    print(dir(e))
-                    print("Exception: %s" % str(e))
+                    self.__output__.put({'Exception': str(e)})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass

@@ -146,11 +146,6 @@ class InformationElementsStats(WigProcess):
             if ies:
                 for ie in ies:
                     tag, length, value = ie
-                    # if tag not in ieee80211.tag_strings.keys():
-                        # print("TAG: %02X" % tag)
-                        # print("LEN: %02X" % length)
-                        # print("%r" % value)
-                        # print(repr(buff))
                     # We avoid adding information elements with invalid length.
                     if length == len(value) and length > 0:
                         if tag not in self.__tag_stats__.keys():
@@ -158,10 +153,7 @@ class InformationElementsStats(WigProcess):
                         else:
                             self.__tag_stats__[tag] += 1
         except Exception, e:
-            pass
-            # print("Exception [%s]:" % self.__module_name__)
-            # print("%s" % e)
-            # print(repr(buff))
+            self.__output__.put({'Exception': str(e)})
 
     @staticmethod
     def get_ie_list(buff):

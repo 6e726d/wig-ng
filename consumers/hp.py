@@ -122,7 +122,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                 except Empty:
                     pass
                 except Exception, e:
-                    print(str(e))
+                    self.__output__.put({"Exception": str(e)})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
