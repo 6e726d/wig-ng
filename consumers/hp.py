@@ -22,6 +22,7 @@ import struct
 
 from Queue import Empty
 from multiprocessing import Event
+from collections import OrderedDict
 
 from helpers import ieee80211
 from helpers.output import writer
@@ -226,7 +227,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                     oui = item[0]
                     if oui == self.hp_ie_oui:
                         ie_data = item[1]
-                        info_items = dict()
+                        info_items = OrderedDict()
                         info_items['SSID'] = ssid
                         info_items['Channel'] = channel
                         info_items['Security'] = security
