@@ -36,6 +36,7 @@ from uncommon import InformationElementsStats
 from hp import HewlettPackardVendorSpecificTypeZero
 from awdl import AppleWirelessDirectLink
 from p2p import WiFiDirect
+from ccx import CiscoClientExtensions
 
 
 class Mediator(WigProcess):
@@ -53,6 +54,7 @@ class Mediator(WigProcess):
         self.__timeout_event__ = Event()
         self.consumers_list = [FramesStats,
                               InformationElementsStats,
+                              CiscoClientExtensions,
                               WiFiProtectedSetup,
                               WiFiDirect,
                               HewlettPackardVendorSpecificTypeZero,
