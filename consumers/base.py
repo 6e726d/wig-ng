@@ -45,9 +45,10 @@ class Mediator(WigProcess):
     type/subtype IEEE 802.11 frames to different frame processing classes.
     """
 
-    def __init__(self, frames_queue, producer_type, passive=True):
+    def __init__(self, frames_queue, output_queue, producer_type, passive=True):
         WigProcess.__init__(self)
         self.__queue__ = frames_queue
+        self.__output_queue__ = output_queue
         self.__stop__ = Event()
         self.__producer_type__ = producer_type
         self.__passive__ = passive
@@ -66,23 +67,10 @@ class Mediator(WigProcess):
         """
         self.set_process_title()
 
-        # Initialize Output Manager
-        self.__output_queue__ = Queue()
-        self.__output_manager__ = OutputManager(self.__output_queue__)
-        self.__output_manager__.start()
-
         if self.__producer_type__ == INFINITE_TYPE:
             self.run_from_infinite_producers()
         else:
             self.run_from_finite_producers()
-
-        # Wait for Output Manager
-        while True:
-            if self.__output_manager__.is_alive() and self.__output_queue__.empty():
-               self.__output_manager__.shutdown()
-               self.__output_manager__.join()
-               break
-            time.sleep(1)
 
     def run_from_finite_producers(self):
         """
@@ -233,27 +221,28 @@ class OutputManager(WigProcess):
         """
         self.set_process_title()
 
-        try:
-            while not self.__stop__.is_set():
-                try:
-                    output = self.__queue__.get(timeout=5)
-                    self.print_item(output)
-                except Empty:
-                    pass
-        # Ignore SIGINT signal, this is handled by parent.
-        except KeyboardInterrupt:
-            pass
+        print("")  # Add empty line when starting to write output.
+
+        while not self.__stop__.is_set():
+            try:
+                output = self.__queue__.get(timeout=5)
+                self.print_item(output)
+            except Empty:
+                pass
+            # Ignore SIGINT signal, this is handled by parent.
+            except KeyboardInterrupt:
+                pass
 
     def print_item(self, output_items):
         """
         TODO: Documentation
         """
-        print("")  # Add empty line on top of item output.
         for k, v in output_items.items():
             if len(k.strip()) == 0:
                 print("%s" % v)
             else:
                 print("%s: %s" % (k, v))
+        print("")  # Add empty line on bottom of item output.
 
     def shutdown(self):
         """

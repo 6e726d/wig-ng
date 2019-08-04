@@ -25,6 +25,7 @@ import argparse
 from multiprocessing import Queue, Value, TimeoutError
 
 from consumers.base import Mediator
+from consumers.base import OutputManager
 from producers.base import LiveNetworkCapture
 from producers.base import OfflineNetworkCapture
 
@@ -79,18 +80,22 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
     TODO: Add documentation.
     """
     try:
-        fq = Queue()
+        frame_queue = Queue()
+        output_queue = Queue()
 
-        mediator = Mediator(fq, OfflineNetworkCapture.PRODUCER_TYPE)
+        output_manager = OutputManager(output_queue)
+        output_manager.start()
+
+        mediator = Mediator(frame_queue, output_queue, OfflineNetworkCapture.PRODUCER_TYPE)
 
         producers_list = list()
         while files_list:
             _file = files_list[0]
 
             if len(producers_list) < concurrent_files:
-                producer = OfflineNetworkCapture(_file, fq)
+                producer = OfflineNetworkCapture(_file, frame_queue)
                 if verbose_level > writer.OUTPUT_INFO:
-                    print("Producer: %s - %s" % (producer, _file))
+                    output_queue.put({'': 'Producer: %s - %s' % (producer, _file)})
                 producers_list.append(producer)
                 producer.start()
                 files_list.remove(_file)
@@ -101,7 +106,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
 
             for producer in producers_list:
                 if not producer.is_alive():
-                    print("Producer: %s finished" % producer)
+                    output_queue.put({'': 'Producer: %s has finished.' % producer})
                     producers_list.remove(producer)
 
             # To avoid 100% CPU usage
@@ -112,14 +117,22 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
 
         while True:
             if not producers_list:
-                print("All producers ended.")
+                output_queue.put({'': 'All producers ended.'})
                 break
 
             for producer in producers_list:
                 if not producer.is_alive():
-                    print("%s finished" % producer)
+                    output_manager.put({'': '%s finished.' % producer})
                     producers_list.remove(producer)
                 time.sleep(1)
+
+        # Wait for Output Manager
+        while True:
+            if output_manager.is_alive() and output_queue.empty():
+               output_manager.shutdown()
+               output_manager.join()
+               break
+            time.sleep(1)
 
         if mediator.is_alive():
             # Give mediator 15 minutes to join.
@@ -137,6 +150,17 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
         mediator.shutdown()
         mediator.join(10)
         mediator.terminate()
+        # Wait for Output Manager
+        while True:
+            print(".")
+            if output_manager.is_alive() and output_queue.empty():
+               output_manager.shutdown()
+               output_manager.join()
+               break
+            time.sleep(1)
+        # output_manager.shutdown()
+        # output_manager.join(10)
+        # output_manager.terminate()
 
 
 def doit_live_capture(interfaces_list, verbose_level):
@@ -144,36 +168,48 @@ def doit_live_capture(interfaces_list, verbose_level):
     TODO: Add documentation.
     """
     try:
-        fq = Queue()
+        frame_queue = Queue()
+        output_queue = Queue()
+
+        output_manager = OutputManager(output_queue)
+        output_manager.start()
 
         producers_list = list()
         for interface in interfaces_list:
-            producer = LiveNetworkCapture(interface, fq)
+            producer = LiveNetworkCapture(interface, frame_queue, bpf_filter="type mgt")
             if verbose_level > writer.OUTPUT_INFO:
-                print("\n%s - %s" % (producer, interface))
+                output_queue.put({'': 'Producer: %s - %s' % (producer, interface)})
             producers_list.append(producer)
             producer.start()
 
-        mediator = Mediator(fq, producers_list[0].PRODUCER_TYPE)
+        mediator = Mediator(frame_queue, output_queue, LiveNetworkCapture.PRODUCER_TYPE)
         mediator.start()
 
         for producer in producers_list:
             if verbose_level > writer.OUTPUT_INFO:
-                print("Waiting for producer %s..." % producer)
+                output_queue.put({'': 'Waiting for producer %s...' % producer})
             producer.join()
 
         mediator.shutdown()
     except KeyboardInterrupt:
-        print("\nCaugth Ctrl+C...")
+        print("\nCaugth Ctrl+C...\n")
         # Graceful shutdown on all producers and consumers.
         for producer in producers_list:
             producer.shutdown()
-            producer.join(10)
-            print("Joined %s" % producer.__class__.__name__)
+            producer.join(30)
+            if producer.is_alive():
+                producer.terminate()
         mediator.shutdown()
         print("Waiting for mediator...")
-        mediator.join(10)
+        mediator.join(90)
         mediator.terminate()
+        # Wait for Output Manager
+        while True:
+            if output_manager.is_alive() and output_queue.empty():
+               output_manager.shutdown()
+               output_manager.join()
+               break
+            time.sleep(1)
 
 
 class PcapCatureDir(argparse.Action):
