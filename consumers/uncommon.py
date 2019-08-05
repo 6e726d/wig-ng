@@ -63,7 +63,7 @@ class InformationElementsStats(WigProcess):
         dot11.Dot11Types.DOT11_SUBTYPE_MANAGEMENT_REASSOCIATION_RESPONSE: 6,
     }
 
-    def __init__(self, frames_queue, output_queue):
+    def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 

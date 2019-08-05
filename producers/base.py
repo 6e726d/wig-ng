@@ -23,6 +23,7 @@ from multiprocessing import Event
 import pcapy
 
 from helpers import radiotap
+from helpers.network import interfaces
 from helpers.Processes import WigProcess
 
 # Link-Layer Headre Types
@@ -43,9 +44,9 @@ class LiveNetworkCapture(WigProcess):
     from a network interface and put it a queue.
     """
 
-    SNAPLEN = 65535
-    PROMISC = False
-    TIMEOUT = 100  # in miliseconds
+    SNAPLEN = interfaces.PCAP_SNAPLEN
+    PROMISC = interfaces.PCAP_PROMISC
+    TIMEOUT = interfaces.PCAP_TIMEOUT
     PRODUCER_TYPE = INFINITE_TYPE
 
     def __init__(self, network_interface, frames_queue, bpf_filter=None):

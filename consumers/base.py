@@ -22,11 +22,15 @@ import time
 import datetime
 import traceback
 
+import pcapy
+
 from Queue import Empty
 from collections import OrderedDict
-from multiprocessing import Event, Queue, Value, TimeoutError
+
+from multiprocessing import Event, Queue, TimeoutError
 
 from helpers import ieee80211
+from helpers.network import interfaces
 from helpers.output import writer
 from helpers.Processes import WigProcess
 from producers.base import FINITE_TYPE, INFINITE_TYPE
@@ -45,21 +49,24 @@ class Mediator(WigProcess):
     type/subtype IEEE 802.11 frames to different frame processing classes.
     """
 
-    def __init__(self, frames_queue, output_queue, producer_type, passive=True):
+    def __init__(self, frames_queue, output_queue, producer_type, injection_queue=None):
         WigProcess.__init__(self)
         self.__queue__ = frames_queue
         self.__output_queue__ = output_queue
+        self.__injection_queue__ = injection_queue
+
         self.__stop__ = Event()
+
         self.__producer_type__ = producer_type
-        self.__passive__ = passive
         self.__timeout_event__ = Event()
+
         self.consumers_list = [FramesStats,
-                              InformationElementsStats,
-                              CiscoClientExtensions,
-                              WiFiProtectedSetup,
-                              WiFiDirect,
-                              HewlettPackardVendorSpecificTypeZero,
-                              AppleWirelessDirectLink]
+                               InformationElementsStats,
+                               CiscoClientExtensions,
+                               WiFiProtectedSetup,
+                               WiFiDirect,
+                               HewlettPackardVendorSpecificTypeZero,
+                               AppleWirelessDirectLink]
 
     def run(self):
         """
@@ -148,7 +155,10 @@ class Mediator(WigProcess):
         consumer_list = list()
         for consumer in self.consumers_list:
             consumer_queue = Queue()
-            consumer_instance = consumer(consumer_queue, self.__output_queue__)
+            if self.__injection_queue__:
+                consumer_instance = consumer(consumer_queue, self.__output_queue__, self.__injection_queue__)
+            else:
+                consumer_instance = consumer(consumer_queue, self.__output_queue__)
             consumer_instance.start()
             consumer_list.append((consumer_instance, consumer_queue))
 
@@ -251,6 +261,48 @@ class OutputManager(WigProcess):
         self.__stop__.set()
 
 
+class FrameInjectionManager(WigProcess):
+    """
+    TODO: Documentation
+    """
+
+    def __init__(self, input_queue, ifaces):
+        WigProcess.__init__(self)
+        self.__stop__ = Event()
+        self.__ifaces__ = ifaces
+        self.__queue__ = input_queue
+
+    def run(self):
+        """
+        TODO: Documentation
+        """
+        self.set_process_title()
+
+        self.__pds__ = list()
+        for iface in self.__ifaces__:
+            self.__pds__.append(pcapy.open_live(iface,
+                                                interfaces.PCAP_SNAPLEN,
+                                                interfaces.PCAP_PROMISC,
+                                                interfaces.PCAP_TIMEOUT))
+
+        while not self.__stop__.is_set():
+            try:
+                frame = self.__queue__.get(timeout=5)
+                for pd in self.__pds__:
+                    pd.sendpacket(frame)
+            except Empty:
+                pass
+            # Ignore SIGINT signal, this is handled by parent.
+            except KeyboardInterrupt:
+                pass
+
+    def shutdown(self):
+        """
+        This method sets the __stop__ event to stop the process.
+        """
+        self.__stop__.set()
+
+
 class FramesStats(WigProcess):
     """
     TODO: Documentation
@@ -258,7 +310,7 @@ class FramesStats(WigProcess):
 
     __module_name__ = "Frame Stats"
 
-    def __init__(self, frames_queue, output_queue):
+    def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 

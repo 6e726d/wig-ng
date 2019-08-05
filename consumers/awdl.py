@@ -89,7 +89,7 @@ class AppleWirelessDirectLink(WigProcess):
     service_request_label = 'service request'
     service_response_label = 'service response'
 
-    def __init__(self, frames_queue, output_queue):
+    def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 

@@ -22,7 +22,6 @@ import time
 import struct
 import string
 import random
-import pprint
 
 from Queue import Empty
 from collections import OrderedDict
@@ -53,7 +52,7 @@ class CiscoClientExtensions(WigProcess):
     SECURITY_KEY = "Security"
     TIMESTAMP_KEY = "Timestamp"
 
-    def __init__(self, frames_queue, output_queue):
+    def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
@@ -63,6 +62,7 @@ class CiscoClientExtensions(WigProcess):
         self.decoder = ImpactDecoder.Dot11Decoder()
         self.decoder.FCS_at_end(False)
 
+        self.__injection_queue__ = injection_queue
         self.__devices__ = dict()
 
     def get_frame_type_filter(self):
@@ -123,8 +123,6 @@ class CiscoClientExtensions(WigProcess):
             if data:
                 if bssid not in self.__devices__:
                     self.__devices__[bssid] = OrderedDict()
-                    # self.__devices__[bssid][self.BSSID_KEY] = bssid
-                    # self.__devices__[bssid][self.TIMESTAMP_KEY] = int(time.time())
                 ssid = reassociation_response._get_element(dot11.DOT11_MANAGEMENT_ELEMENTS.SSID)
                 if ssid and self.SSID_KEY not in self.__devices__[bssid]:
                     self.__devices__[bssid][self.SSID_KEY] = ssid
@@ -148,13 +146,11 @@ class CiscoClientExtensions(WigProcess):
             data = frame._get_element(ccx.CISCO_CCX_IE_DEVICE_NAME_ID)
             if bssid not in self.__devices__ and data:
                 self.__devices__[bssid] = OrderedDict()
-                # self.__devices__[bssid][self.BSSID_KEY] = bssid
                 ssid = frame.get_ssid().replace("\x00", "")
                 self.__devices__[bssid][self.SSID_KEY] = ssid
                 channel = frame.get_ds_parameter_set()
                 if channel:
                     self.__devices__[bssid][self.CHANNEL_KEY] = channel
-                # self.__devices__[bssid][self.TIMESTAMP_KEY] = int(time.time())
                 ccx85 = chr(ccx.CISCO_CCX_IE_DEVICE_NAME_ID) + chr(len(data)) + data
                 device_name = ccx.CiscoCCX85InformationElement(ccx85).get_device_name()
                 associated_clients = ccx.CiscoCCX85InformationElement(ccx85).get_associated_clients()
@@ -163,7 +159,6 @@ class CiscoClientExtensions(WigProcess):
                 self.__devices__[bssid][self.SECURITY_KEY] = security
                 aux = writer.get_device_information_dict(bssid.upper(), self.__module_name__, self.__devices__[bssid])
                 self.__output__.put(aux)
-                # pprint.pprint(self.__devices__[bssid])
                 if self.CTRL_IP_ADDR_KEY not in self.__devices__[bssid]:
                     data = str()
                     data += struct.pack("H", frame.get_capabilities())  # capabilities
@@ -180,12 +175,37 @@ class CiscoClientExtensions(WigProcess):
                     data += frame.get_header_as_string()[12:]
                     self.transmit_reassociation_request(ieee80211.get_buffer_from_string_mac_address(bssid), data)
 
+    def get_radiotap_header(self):
+        """Returns a radiotap header buffer for frame injection."""
+        buff = str()
+        buff += "\x00\x00"  # Version
+        buff += "\x0b\x00"  # Header length
+        buff += "\x04\x0c\x00\x00"  # Bitmap
+        buff += "\x6c"  # Rate
+        buff += "\x0c"  # TX Power
+        buff += "\x01"  # Antenna
+        return buff
+
+    def get_reassociation_request_frame(self, destination, seq, data):
+        """Returns management reassociation request frame header."""
+        buff = str()
+        buff += self.get_radiotap_header()
+        buff += "\x20\x00"  # Frame Control - Management - Reassociation Request
+        buff += "\x28\x00"  # Duration
+        buff += destination  # Destination Address- Broadcast
+        buff += '\x00\x00\xde\xad\xbe\xef'  # Source Address
+        buff += destination  # BSSID Address - Broadcast
+        buff += "\x00" + struct.pack("B", seq)[0]  # Sequence Control
+        # Capabilities
+        buff += data
+        return buff
+
     def transmit_reassociation_request(self, bssid, data):
         """Transmit reassociation request frame."""
-        # seq = random.randint(1, 254)  # TODO: Fix how we are handling sequence numbers
-        # frame = self.get_reassociation_request_frame(bssid, seq, data)
-        # self.pd.sendpacket(frame)
-        pass
+        if self.__injection_queue__:
+            seq = random.randint(1, 254)  # TODO: Fix how we are handling sequence numbers
+            frame = self.get_reassociation_request_frame(bssid, seq, data)
+            self.__injection_queue__.put(frame)
 
     def shutdown(self):
         """

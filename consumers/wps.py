@@ -40,7 +40,7 @@ class WiFiProtectedSetup(WigProcess):
 
     __module_name__ = "WPS (WiFi Protected Setup)"
 
-    def __init__(self, frames_queue, output_queue):
+    def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 

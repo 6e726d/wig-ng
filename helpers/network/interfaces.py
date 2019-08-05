@@ -34,6 +34,11 @@ ARPHRD_IEEE80211_RADIOTAP = 803
 DLT_IEEE802_11 = 105
 DLT_IEEE802_11_RADIO = 127
 
+# Pcap Constants
+PCAP_SNAPLEN = 65535
+PCAP_PROMISC = False
+PCAP_TIMEOUT = 100  # in miliseconds
+
 
 def get_ieee80211_network_interfaces():
     """

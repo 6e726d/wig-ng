@@ -20,11 +20,15 @@
 
 import os
 import time
+import copy
+import ctypes
 import argparse
 
-from multiprocessing import Queue, Value, TimeoutError
+from multiprocessing import Queue, Array, TimeoutError
+from multiprocessing import Array as mpArray
 
 from consumers.base import Mediator
+from consumers.base import FrameInjectionManager
 from consumers.base import OutputManager
 from producers.base import LiveNetworkCapture
 from producers.base import OfflineNetworkCapture
@@ -122,7 +126,7 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
 
             for producer in producers_list:
                 if not producer.is_alive():
-                    output_manager.put({'': '%s finished.' % producer})
+                    output_queue.put({'': '%s finished.' % producer})
                     producers_list.remove(producer)
                 time.sleep(1)
 
@@ -152,27 +156,27 @@ def doit_pcap_files(files_list, concurrent_files, verbose_level):
         mediator.terminate()
         # Wait for Output Manager
         while True:
-            print(".")
             if output_manager.is_alive() and output_queue.empty():
                output_manager.shutdown()
                output_manager.join()
                break
             time.sleep(1)
-        # output_manager.shutdown()
-        # output_manager.join(10)
-        # output_manager.terminate()
 
 
-def doit_live_capture(interfaces_list, verbose_level):
+def doit_live_capture(interfaces_list, verbose_level, active_mode):
     """
     TODO: Add documentation.
     """
     try:
         frame_queue = Queue()
         output_queue = Queue()
+        injection_queue = Queue()
 
         output_manager = OutputManager(output_queue)
         output_manager.start()
+
+        frame_injection_manager = FrameInjectionManager(injection_queue, interfaces_list)
+        frame_injection_manager.start()
 
         producers_list = list()
         for interface in interfaces_list:
@@ -182,7 +186,10 @@ def doit_live_capture(interfaces_list, verbose_level):
             producers_list.append(producer)
             producer.start()
 
-        mediator = Mediator(frame_queue, output_queue, LiveNetworkCapture.PRODUCER_TYPE)
+        if active_mode:
+            mediator = Mediator(frame_queue, output_queue, LiveNetworkCapture.PRODUCER_TYPE, injection_queue)
+        else:
+            mediator = Mediator(frame_queue, output_queue, LiveNetworkCapture.PRODUCER_TYPE)
         mediator.start()
 
         for producer in producers_list:
@@ -199,10 +206,12 @@ def doit_live_capture(interfaces_list, verbose_level):
             producer.join(30)
             if producer.is_alive():
                 producer.terminate()
-        mediator.shutdown()
+
         print("Waiting for mediator...")
+        mediator.shutdown()
         mediator.join(90)
         mediator.terminate()
+
         # Wait for Output Manager
         while True:
             if output_manager.is_alive() and output_queue.empty():
@@ -210,6 +219,8 @@ def doit_live_capture(interfaces_list, verbose_level):
                output_manager.join()
                break
             time.sleep(1)
+
+        frame_injection_manager.terminate()
 
 
 class PcapCatureDir(argparse.Action):
@@ -256,6 +267,10 @@ if __name__ == "__main__":
         metavar='count',
         help='Number of PCAP capture files to process simultaneously.')
 
+    parser.add_argument('-a', '--active',
+        action="store_true",
+        help='Some modules can perform frame injection, this is define by setting the active mode.')
+
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('-i', '--interface',
         action='append',
@@ -274,7 +289,7 @@ if __name__ == "__main__":
 
     if args.interface:
         check_input_network_interfaces(args.interface)
-        doit_live_capture(args.interface, args.verbose_level)
+        doit_live_capture(args.interface, args.verbose_level, args.active)
 
     if args.r:
         check_input_pcap_capture_files(args.r)

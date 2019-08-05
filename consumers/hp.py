@@ -67,7 +67,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         'USB connected to host': 0b00000000000000000000000000010000,
     }
 
-    def __init__(self, frames_queue, output_queue):
+    def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
         self.__stop__ = Event()
 
