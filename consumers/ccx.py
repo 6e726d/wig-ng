@@ -159,53 +159,6 @@ class CiscoClientExtensions(WigProcess):
                 self.__devices__[bssid][self.SECURITY_KEY] = security
                 aux = writer.get_device_information_dict(bssid.upper(), self.__module_name__, self.__devices__[bssid])
                 self.__output__.put(aux)
-                if self.CTRL_IP_ADDR_KEY not in self.__devices__[bssid]:
-                    data = str()
-                    data += struct.pack("H", frame.get_capabilities())  # capabilities
-                    data += "\x5a\x00"  # listen intervals
-                    data += ieee80211.get_buffer_from_string_mac_address(bssid)
-                    data += frame.get_header_as_string()[12:]
-                    self.transmit_reassociation_request(ieee80211.get_buffer_from_string_mac_address(bssid), data)
-            elif bssid in self.__devices__ and data:
-                if self.CTRL_IP_ADDR_KEY not in self.__devices__[bssid]:
-                    data = str()
-                    data += struct.pack("H", frame.get_capabilities())  # capabilities
-                    data += "\x5a\x00"  # listen intervals
-                    data += ieee80211.get_buffer_from_string_mac_address(bssid)
-                    data += frame.get_header_as_string()[12:]
-                    self.transmit_reassociation_request(ieee80211.get_buffer_from_string_mac_address(bssid), data)
-
-    def get_radiotap_header(self):
-        """Returns a radiotap header buffer for frame injection."""
-        buff = str()
-        buff += "\x00\x00"  # Version
-        buff += "\x0b\x00"  # Header length
-        buff += "\x04\x0c\x00\x00"  # Bitmap
-        buff += "\x6c"  # Rate
-        buff += "\x0c"  # TX Power
-        buff += "\x01"  # Antenna
-        return buff
-
-    def get_reassociation_request_frame(self, destination, seq, data):
-        """Returns management reassociation request frame header."""
-        buff = str()
-        buff += self.get_radiotap_header()
-        buff += "\x20\x00"  # Frame Control - Management - Reassociation Request
-        buff += "\x28\x00"  # Duration
-        buff += destination  # Destination Address- Broadcast
-        buff += '\x00\x00\xde\xad\xbe\xef'  # Source Address
-        buff += destination  # BSSID Address - Broadcast
-        buff += "\x00" + struct.pack("B", seq)[0]  # Sequence Control
-        # Capabilities
-        buff += data
-        return buff
-
-    def transmit_reassociation_request(self, bssid, data):
-        """Transmit reassociation request frame."""
-        if self.__injection_queue__:
-            seq = random.randint(1, 254)  # TODO: Fix how we are handling sequence numbers
-            frame = self.get_reassociation_request_frame(bssid, seq, data)
-            self.__injection_queue__.put(frame)
 
     def shutdown(self):
         """
