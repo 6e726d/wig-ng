@@ -22,9 +22,13 @@ import struct
 
 from collections import OrderedDict
 
-import wps
-import ieee80211
-
+import sys
+if sys.version_info[0] >= 3:
+	import consumers.wps
+	import helpers.ieee80211
+else:
+	import wps
+	import ieee80211
 
 class InvalidP2PInformationElement(Exception):
     """Invalid P2P Information Element Exception."""

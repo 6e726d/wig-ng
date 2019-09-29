@@ -25,7 +25,11 @@ import ctypes
 
 import pcapy
 
-from Queue import Empty
+import sys
+if sys.version_info[0] >= 3:
+        from queue import Empty
+else:
+        from Queue import Empty
 from collections import OrderedDict
 from multiprocessing import Event
 from multiprocessing import Array as mpArray
@@ -129,7 +133,7 @@ class WiFiDirect(WigProcess):
         if not ssid.startswith(self.WIFI_DIRECT_SSID):
             return
 
-        if device_mac not in self.__devices__.keys():
+        if device_mac not in list(self.__devices__.keys()):
             self.__devices__[device_mac] = list()
             vs_list = probe_response_frame.get_vendor_specific()
             wps_ie_info = dict()
@@ -164,9 +168,9 @@ class WiFiDirect(WigProcess):
             info_items['SSID'] = ssid
             if channel:
                 info_items['Channel'] = channel
-            for key, value in p2p_ie_info.items():
+            for key, value in list(p2p_ie_info.items()):
                 info_items['%s' % key] = value
-            for key, value in wps_ie_info.items():
+            for key, value in list(wps_ie_info.items()):
                 info_items['WPS %s' % key] = value
 
             aux = writer.get_device_information_dict(device_mac.upper(), self.__module_name__, info_items)

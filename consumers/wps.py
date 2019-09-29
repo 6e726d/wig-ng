@@ -21,7 +21,11 @@
 import string
 import struct
 
-from Queue import Empty
+import sys
+if sys.version_info[0] >= 3:
+        from queue import Empty
+else:
+        from Queue import Empty
 from multiprocessing import Event
 
 from helpers import wps
@@ -93,7 +97,7 @@ class WiFiProtectedSetup(WigProcess):
                                 self.process_frame(frame_control, mgt_frame)
                 except Empty:
                     pass
-                except Exception, e:
+                except Exception as e:
                     self.__output__.put({'Exception': str(e)})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
@@ -107,7 +111,7 @@ class WiFiProtectedSetup(WigProcess):
         device_mac = ieee80211.get_string_mac_address_from_array(
                                                  mgt_frame.get_source_address())
 
-        if device_mac not in self.devices.keys():
+        if device_mac not in list(self.devices.keys()):
             self.devices[device_mac] = list()
             if frame_ctl.get_subtype() == ieee80211.TYPE_MGMT_SUBTYPE_PROBE_RESPONSE:
                 _frame = self.decoder.get_protocol(dot11.Dot11ManagementProbeResponse)

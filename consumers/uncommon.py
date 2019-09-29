@@ -20,7 +20,11 @@
 
 import struct
 
-from Queue import Empty
+import sys
+if sys.version_info[0] >= 3:
+        from queue import Empty
+else:
+        from Queue import Empty
 from multiprocessing import Event
 from collections import OrderedDict
 
@@ -128,8 +132,8 @@ class InformationElementsStats(WigProcess):
 
         aux =  OrderedDict()
         aux['Module'] = self.__module_name__
-        for tag_id, count in self.__tag_stats__.items():
-            if tag_id in ieee80211.tag_strings.keys():
+        for tag_id, count in list(self.__tag_stats__.items()):
+            if tag_id in list(ieee80211.tag_strings.keys()):
                 aux['TAG %02X [%s]' % (tag_id, ieee80211.tag_strings[tag_id])] = count
             else:
                 aux['TAG %02X' % tag_id] = count
@@ -148,11 +152,11 @@ class InformationElementsStats(WigProcess):
                     tag, length, value = ie
                     # We avoid adding information elements with invalid length.
                     if length == len(value) and length > 0:
-                        if tag not in self.__tag_stats__.keys():
+                        if tag not in list(self.__tag_stats__.keys()):
                             self.__tag_stats__[tag] = 1
                         else:
                             self.__tag_stats__[tag] += 1
-        except Exception, e:
+        except Exception as e:
             self.__output__.put({'Exception': str(e)})
 
     @staticmethod

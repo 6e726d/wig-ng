@@ -23,7 +23,12 @@ import struct
 import string
 import random
 
-from Queue import Empty
+
+import sys
+if sys.version_info[0] >= 3:
+        from queue import Empty
+else:
+        from Queue import Empty
 from collections import OrderedDict
 from multiprocessing import Event
 

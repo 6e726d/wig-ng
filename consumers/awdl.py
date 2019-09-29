@@ -20,7 +20,11 @@
 
 import struct
 
-from Queue import Empty
+import sys
+if sys.version_info[0] >= 3:
+	from queue import Empty
+else:
+	from Queue import Empty
 from multiprocessing import Event
 
 from helpers import ieee80211
@@ -152,7 +156,7 @@ class AppleWirelessDirectLink(WigProcess):
         device_mac = ieee80211.get_string_mac_address_from_array(mgt_frame.get_source_address())
         __data = self.process_airplay_data(data)
         if __data:
-            if device_mac not in self.__devices__.keys():
+            if device_mac not in list(self.__devices__.keys()):
                 if self.name_label in __data:
                     info_items = dict()
                     info_items['Name'] = __data[self.name_label]
