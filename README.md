@@ -48,4 +48,4 @@ optional arguments:
 
 ## Notes
 
- - This tools doesn't perform channel hopping, use a tools such as [chopping](https://github.com/6e726d/chopping) or [airodump-ng](https://www.aircrack-ng.org/).
+ - This tool doesn't perform channel hopping, use tools such as [chopping](https://github.com/6e726d/chopping) or [airodump-ng](https://www.aircrack-ng.org/).
