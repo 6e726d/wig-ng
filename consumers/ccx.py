@@ -23,7 +23,7 @@ import struct
 import string
 import random
 
-from Queue import Empty
+from queue import Empty
 from collections import OrderedDict
 from multiprocessing import Event
 

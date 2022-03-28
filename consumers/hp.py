@@ -20,7 +20,7 @@
 
 import struct
 
-from Queue import Empty
+from queue import Empty
 from multiprocessing import Event
 from collections import OrderedDict
 

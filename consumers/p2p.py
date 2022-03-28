@@ -25,7 +25,7 @@ import ctypes
 
 import pcapy
 
-from Queue import Empty
+from queue import Empty
 from collections import OrderedDict
 from multiprocessing import Event
 from multiprocessing import Array as mpArray

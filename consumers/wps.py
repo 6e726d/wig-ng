@@ -21,7 +21,7 @@
 import string
 import struct
 
-from Queue import Empty
+from queue import Empty
 from multiprocessing import Event
 
 from helpers import wps
