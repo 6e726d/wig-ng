@@ -123,7 +123,7 @@ class Mediator(WigProcess):
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
-        except Exception, e:
+        except Exception as e:
             self.__output_queue__.put({'Exception': str(e)})
         finally:
             # We need to wait for consumers to finish.
@@ -143,7 +143,7 @@ class Mediator(WigProcess):
                     time.sleep(5)
                 # except KeyboardInterrupt:
                     # traceback.print_stack()
-                except Exception, e:
+                except Exception as e:
                     self.__output_queue__.put({'Exception': str(e)})
 
     def run_from_infinite_producers(self):
@@ -184,7 +184,7 @@ class Mediator(WigProcess):
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
-        except Exception, e:
+        except Exception as e:
             self.__output_queue__.put({'Exception': str(e)})
         finally:
             for item in consumer_list:

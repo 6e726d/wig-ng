@@ -152,7 +152,7 @@ class InformationElementsStats(WigProcess):
                             self.__tag_stats__[tag] = 1
                         else:
                             self.__tag_stats__[tag] += 1
-        except Exception, e:
+        except Exception as e:
             self.__output__.put({'Exception': str(e)})
 
     @staticmethod
