@@ -35,12 +35,12 @@ from helpers.output import writer
 from helpers.Processes import WigProcess
 from producers.base import FINITE_TYPE, INFINITE_TYPE
 
-from wps import WiFiProtectedSetup
-from uncommon import InformationElementsStats
-from hp import HewlettPackardVendorSpecificTypeZero
-from awdl import AppleWirelessDirectLink
-from p2p import WiFiDirect
-from ccx import CiscoClientExtensions
+from .wps import WiFiProtectedSetup
+from .uncommon import InformationElementsStats
+from .hp import HewlettPackardVendorSpecificTypeZero
+from .awdl import AppleWirelessDirectLink
+from .p2p import WiFiDirect
+from .ccx import CiscoClientExtensions
 
 
 class Mediator(WigProcess):
