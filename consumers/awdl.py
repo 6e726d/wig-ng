@@ -19,6 +19,7 @@
 #
 
 import struct
+import traceback
 
 from queue import Empty
 from multiprocessing import Event
@@ -38,7 +39,7 @@ class AppleWirelessDirectLink(WigProcess):
 
     __module_name__ = "Apple Wireless Direct Link"
 
-    VENDOR_SPECIFIC = b"\x7f"
+    VENDOR_SPECIFIC = 0x7f
     APPLE_OUI = b"\x00\x17\xf2"
 
     SUBTYPE_MASTER_INDICATION_FRAME = 0x03
@@ -126,7 +127,8 @@ class AppleWirelessDirectLink(WigProcess):
                     frame = self.__queue__.get(timeout=5)
                     try:
                         self.decoder.decode(frame)
-                    except Exception:
+                    except Exception as e:
+                        self.__output__.put({'Exception': traceback.format_exc()})
                         self.malformed +=1
                         continue
                     frame_control = self.decoder.get_protocol(dot11.Dot11)
@@ -180,62 +182,65 @@ class AppleWirelessDirectLink(WigProcess):
         """Process AirPlay Data."""
         idx = 0
 
-        # Verify Vendor Specific
-        if data[0] != self.VENDOR_SPECIFIC:
-            return 0
-        idx += 1
+        try:
+            # Verify Vendor Specific
+            if data[0] != self.VENDOR_SPECIFIC:
+                return 0
+            idx += 1
 
-        # Verify Apple OUI
-        if data[idx:idx+len(self.APPLE_OUI)] != self.APPLE_OUI:
-            return None
-        idx += len(self.APPLE_OUI)
+            # Verify Apple OUI
+            if data[idx:idx+len(self.APPLE_OUI)] != self.APPLE_OUI:
+                return None
+            idx += len(self.APPLE_OUI)
 
-        # AWDL Fixed Parameters
-        # awdl_type = struct.unpack("B", data[idx])[0]
-        idx += 1
+            # AWDL Fixed Parameters
+            # awdl_type = struct.unpack("B", data[idx])[0]
+            idx += 1
 
-        awdl_version = struct.unpack("B", data[idx])[0]
-        idx += 1
-        # Verify AWDL Version
-        if awdl_version != 0x10:
-            return
+            awdl_version = data[idx]
+            idx += 1
+            # Verify AWDL Version
+            if awdl_version != 0x10:
+                return
 
-        awdl_subtype = struct.unpack("B", data[idx])[0]
-        # Verify AWDL Subtype
-        if awdl_subtype != self.SUBTYPE_MASTER_INDICATION_FRAME:
-            return
-        idx += 10
+            awdl_subtype = data[idx]
+            # Verify AWDL Subtype
+            if awdl_subtype != self.SUBTYPE_MASTER_INDICATION_FRAME:
+                return
+            idx += 10
 
-        result = {}
-        raw_data = data[idx:]
-        remaining_data = raw_data
-        while len(remaining_data) > 4:
-            tlv_type = remaining_data[0]
-            tlv_length = struct.unpack("H", remaining_data[1:3])[0]
-            tlv_data = remaining_data[3:tlv_length+3]
+            result = {}
+            raw_data = data[idx:]
+            remaining_data = raw_data
+            while len(remaining_data) > 4:
+                tlv_type = remaining_data[0]
+                tlv_length = struct.unpack("H", remaining_data[1:3])[0]
+                tlv_data = remaining_data[3:tlv_length+3]
 
-            if tlv_type == self.TLV_DATA_PATH_STATE:
-                if tlv_length > 5:
-                    country_code = tlv_data[2:4]
-                    result[self.country_label] = country_code
-            elif tlv_type == self.TLV_ARPA:
-                str_length = struct.unpack("B", tlv_data[1])[0]
-                result[self.name_label] = tlv_data[2:2+str_length]
-            elif tlv_type == self.TLV_VERSION:
-                device_class = struct.unpack("B", tlv_data[1])[0]
-                if device_class in self.DEVICE_CLASS:
-                    result[self.class_label] = self.DEVICE_CLASS[device_class]
-            elif tlv_type == self.TLV_SERVICE_REQUEST:
-                if not self.service_request_label in result:
-                    result[self.service_request_label] = []
-                result[self.service_request_label].append(tlv_data)
-            elif tlv_type == self.TLV_SERVICE_RESPONSE:
-                if not self.service_response_label in result:
-                    result[self.service_response_label] = []
-                result[self.service_response_label].append(tlv_data)
+                if tlv_type == self.TLV_DATA_PATH_STATE:
+                    if tlv_length > 5:
+                        country_code = tlv_data[2:4]
+                        result[self.country_label] = country_code
+                elif tlv_type == self.TLV_ARPA:
+                    str_length = tlv_data[1]
+                    result[self.name_label] = tlv_data[2:2+str_length]
+                elif tlv_type == self.TLV_VERSION:
+                    device_class = tlv_data[1]
+                    if device_class in self.DEVICE_CLASS:
+                        result[self.class_label] = self.DEVICE_CLASS[device_class]
+                elif tlv_type == self.TLV_SERVICE_REQUEST:
+                    if not self.service_request_label in result:
+                        result[self.service_request_label] = []
+                    result[self.service_request_label].append(tlv_data)
+                elif tlv_type == self.TLV_SERVICE_RESPONSE:
+                    if not self.service_response_label in result:
+                        result[self.service_response_label] = []
+                    result[self.service_response_label].append(tlv_data)
 
-            remaining_data = remaining_data[tlv_length+3:]
-        return result
+                remaining_data = remaining_data[tlv_length+3:]
+            return result
+        except Exception as e:
+            self.__output__.put({'Exception': traceback.format_exc()})
 
     def shutdown(self):
         """
