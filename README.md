@@ -7,6 +7,7 @@ WIG (WiFi Information Gathering) is a free and open source utility for WiFi devi
 
 ### Installation
 
+**$** sudo pip install setproctitle
 **$** sudo pip install pcapy  
 **$** sudo pip install impacket  
 **$** git clone https://github.com/6e726d/wig-ng.git
