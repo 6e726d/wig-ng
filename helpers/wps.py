@@ -160,9 +160,9 @@ class WPSInformationElement(object):
     TLV_SIZE_LENGTH = 2
     WPS_IE_SIZE_LENGTH = 1
 
-    VENDOR_SPECIFIC_IE_ID = "\xdd"  # Vendor Specific ID
-    WPS_OUI = "\x00\x50\xf2"  # Microsoft OUI (WiFi Alliance)
-    WPS_OUI_TYPE = "\x04"  # WPS type
+    VENDOR_SPECIFIC_IE_ID = b"\xdd"  # Vendor Specific ID
+    WPS_OUI = b"\x00\x50\xf2"  # Microsoft OUI (WiFi Alliance)
+    WPS_OUI_TYPE = b"\x04"  # WPS type
     FIXED_DATA_LENGTH = len(VENDOR_SPECIFIC_IE_ID) + WPS_IE_SIZE_LENGTH + len(WPS_OUI) + len(WPS_OUI_TYPE)
 
     def __init__(self, buff):
@@ -183,7 +183,7 @@ class WPSInformationElement(object):
         idx = 0
         if self.buffer_length <= self.FIXED_DATA_LENGTH:
             raise InvalidWPSInformationElement("Invalid buffer length.")
-        if not self.buffer[idx] == self.VENDOR_SPECIFIC_IE_ID:
+        if not struct.pack("B", self.buffer[idx]) == self.VENDOR_SPECIFIC_IE_ID:
             raise InvalidWPSInformationElement("Invalid WPS information element id.")
         idx += len(self.VENDOR_SPECIFIC_IE_ID) + self.WPS_IE_SIZE_LENGTH
         if not self.buffer[idx:self.FIXED_DATA_LENGTH] == self.WPS_OUI + self.WPS_OUI_TYPE:
@@ -212,29 +212,29 @@ class WPSInformationElement(object):
             config_methods_list.append("Push Button")
         if config_method_value & WPSConfigurationMethods.CONFIG_METHOD_KEYPAD:
             config_methods_list.append("Keypad")
-        return ", ".join(config_methods_list)
+        return bytes(", ".join(config_methods_list), 'ascii')
 
     def get_version_string(self, data):
         """Returns a string with the WPS version based on the data parameter."""
-        value = "%02X" % ord(data)
-        return "%s.%s" % (value[0], value[1])
+        value = "%02X" % struct.unpack("B", data)[0]
+        return bytes("%s.%s" % (value[0], value[1]), 'ascii')
 
     def get_setup_state_string(self, data):
         """Returns a string with the WPS version based on the data parameter."""
         value = struct.unpack("B", data)[0]
         if value == 1:
-            return "Not-Configured"
+            return b"Not-Configured"
         elif value == 2:
-            return "Configured"
+            return b"Configured"
         else:
-            return "Invalid Value"
+            return b"Invalid Value"
 
     def get_uuid_string(self, data):
         """Returns a string with the WPS UUID based on the data parameter."""
         uuid = str()
         for char in data:
-            uuid += "%02X" % ord(char)
-        return uuid
+            uuid += "%02X" % char
+        return bytes(uuid, 'ascii')
 
     @staticmethod
     def get_primary_device_type_string(data):
@@ -243,25 +243,25 @@ class WPSInformationElement(object):
         category = struct.unpack("!H", data[:2])[0]
         # subcategory = struct.unpack("!H", data[6:8])[0]
         if category == 1:
-            primary_device_type = "Computer"
+            primary_device_type = b"Computer"
         elif category == 2:
-            primary_device_type = "Input Device"
+            primary_device_type = b"Input Device"
         elif category == 3:
-            primary_device_type = "Printers, Scanners, Faxes and Copiers"
+            primary_device_type = b"Printers, Scanners, Faxes and Copiers"
         elif category == 4:
-            primary_device_type = "Camera"
+            primary_device_type = b"Camera"
         elif category == 5:
-            primary_device_type = "Storage"
+            primary_device_type = b"Storage"
         elif category == 6:
-            primary_device_type = "Network Infrastructure"
+            primary_device_type = b"Network Infrastructure"
         elif category == 7:
-            primary_device_type = "Displays"
+            primary_device_type = b"Displays"
         elif category == 8:
-            primary_device_type = "Multimedia Devices"
+            primary_device_type = b"Multimedia Devices"
         elif category == 9:
-            primary_device_type = "Gaming Devices"
+            primary_device_type = b"Gaming Devices"
         elif category == 10:
-            primary_device_type = "Telephone"
+            primary_device_type = b"Telephone"
         return primary_device_type
 
     def __process_buffer__(self):

@@ -39,7 +39,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
 
     __module_name__ = "HP Printer Vendor Specific"
 
-    hp_ie_oui = "\x08\x00\x09"
+    hp_ie_oui = b"\x08\x00\x09"
 
     regex_list = ["^HP-Print-[0-9A-Fa-f][0-9A-Fa-f]-(.*)$",
                   "^DIRECT-[0-9A-Fa-f][0-9A-Fa-f]-HP (.*)$"]
@@ -123,7 +123,9 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                 except Empty:
                     pass
                 except Exception as e:
-                    self.__output__.put({"Exception": str(e)})
+                    # self.__output__.put({"Exception": str(e)})
+                    import traceback
+                    self.__output_.put({'Exception': traceback.format_exc()})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
@@ -189,7 +191,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                     continue
                 uuid = list()
                 for byte in data[index:index + tag_length]:
-                    uuid.append("%02X" % ord(byte))
+                    uuid.append("%02X" % byte)
                 info_dict['UUID'] = "".join(uuid)
                 index += tag_length
             elif tag_id == self.HP_TLV_TYPES['Device Station IPv4 Address']:
@@ -197,7 +199,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                     continue
                 octets = list()
                 for byte in data[index:index + tag_length]:
-                    octets.append("%d" % ord(byte))
+                    octets.append("%d" % byte)
                 info_dict['IPv4 Address'] = ".".join(octets)
                 index += tag_length
             else:

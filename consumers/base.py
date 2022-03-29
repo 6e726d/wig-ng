@@ -124,7 +124,8 @@ class Mediator(WigProcess):
         except KeyboardInterrupt:
             pass
         except Exception as e:
-            self.__output_queue__.put({'Exception': str(e)})
+            # self.__output_queue__.put({'Exception': str(e)})
+            self.__output_queue__.put({'Exception': traceback.format_exc()})
         finally:
             # We need to wait for consumers to finish.
             self.__output_queue__.put({' ': 'Waiting for modules to finish. Please wait...'})
@@ -144,7 +145,8 @@ class Mediator(WigProcess):
                 # except KeyboardInterrupt:
                     # traceback.print_stack()
                 except Exception as e:
-                    self.__output_queue__.put({'Exception': str(e)})
+                    # self.__output_queue__.put({'Exception': str(e)})
+                    self.__output_queue__.put({'Exception': traceback.format_exc()})
 
     def run_from_infinite_producers(self):
         """
@@ -185,7 +187,8 @@ class Mediator(WigProcess):
         except KeyboardInterrupt:
             pass
         except Exception as e:
-            self.__output_queue__.put({'Exception': str(e)})
+            # self.__output_queue__.put({'Exception': str(e)})
+            self.__output_queue__.put({'Exception': traceback.format_exc()})
         finally:
             for item in consumer_list:
                 consumer = item[0]

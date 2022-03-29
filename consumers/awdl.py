@@ -38,8 +38,8 @@ class AppleWirelessDirectLink(WigProcess):
 
     __module_name__ = "Apple Wireless Direct Link"
 
-    VENDOR_SPECIFIC = "\x7f"
-    APPLE_OUI = "\x00\x17\xf2"
+    VENDOR_SPECIFIC = b"\x7f"
+    APPLE_OUI = b"\x00\x17\xf2"
 
     SUBTYPE_MASTER_INDICATION_FRAME = 0x03
 
@@ -210,7 +210,7 @@ class AppleWirelessDirectLink(WigProcess):
         raw_data = data[idx:]
         remaining_data = raw_data
         while len(remaining_data) > 4:
-            tlv_type = ord(remaining_data[0])
+            tlv_type = remaining_data[0]
             tlv_length = struct.unpack("H", remaining_data[1:3])[0]
             tlv_data = remaining_data[3:tlv_length+3]
 

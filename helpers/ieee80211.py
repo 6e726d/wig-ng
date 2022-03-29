@@ -455,14 +455,14 @@ def get_frame_type(frame_control):
     """
     Returns frame type.
     """
-    return (ord(frame_control[0]) & 0b00001100) >> 2
+    return (frame_control[0] & 0b00001100) >> 2
 
 
 def get_frame_subtype(frame_control):
     """
     Returns frame subtype.
     """
-    return (ord(frame_control[0]) & 0b11110000) >> 4
+    return (frame_control[0] & 0b11110000) >> 4
 
 
 def get_security(frame):
@@ -488,7 +488,7 @@ def get_security(frame):
 
 def get_string_mac_address_from_buffer(buff):
     """Returns string representation of a MAC address from a buffer."""
-    return ":".join('%02x' % ord(octet) for octet in buff)
+    return ":".join('%02x' % octet for octet in buff)
 
 
 def get_string_mac_address_from_array(buff):

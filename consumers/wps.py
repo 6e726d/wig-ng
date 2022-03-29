@@ -20,6 +20,7 @@
 
 import string
 import struct
+import traceback
 
 from queue import Empty
 from multiprocessing import Event
@@ -78,7 +79,8 @@ class WiFiProtectedSetup(WigProcess):
                     frame = self.__queue__.get(timeout=5)
                     try:
                         self.decoder.decode(frame)
-                    except Exception:
+                    except Exception as e:
+                        self.__output__.put({'Exception': traceback.format_exc()})
                         self.malformed +=1
                         continue
                     frame_control = self.decoder.get_protocol(dot11.Dot11)
@@ -94,7 +96,7 @@ class WiFiProtectedSetup(WigProcess):
                 except Empty:
                     pass
                 except Exception as e:
-                    self.__output__.put({'Exception': str(e)})
+                    self.__output__.put({'Exception': traceback.format_exc()})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
@@ -120,21 +122,21 @@ class WiFiProtectedSetup(WigProcess):
                 vs_list = _frame.get_vendor_specific()
                 for item in vs_list:
                     oui, data = item
-                    vs_type = data[0]
+                    vs_type = struct.pack("B", data[0])
                     length = struct.pack("B", len(oui + data))
                     raw_data = wps.WPSInformationElement.VENDOR_SPECIFIC_IE_ID + length + oui + data
                     if oui == wps.WPSInformationElement.WPS_OUI and vs_type == wps.WPSInformationElement.WPS_OUI_TYPE:
                         info_items = dict()
                         if ssid:
-                            info_items['SSID'] = ssid
+                            info_items['SSID'] = ssid.decode('utf-8')
                         if channel:
                             info_items['Channel'] = channel
                         info_items['Security'] = security
                         ie = wps.WPSInformationElement(raw_data)
                         for element in ie.get_elements():
                             k, v = element
-                            if all(c in string.printable for c in v):
-                                info_items[string.capwords(k)] = v
+                            if all(c in bytes(string.printable, "ascii") for c in v):
+                                info_items[string.capwords(k)] = v.decode('ascii')
                             else:
                                 info_items[string.capwords(k)] = repr(v)
                         aux = writer.get_device_information_dict(device_mac.upper(), self.__module_name__, info_items)

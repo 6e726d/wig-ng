@@ -153,7 +153,9 @@ class InformationElementsStats(WigProcess):
                         else:
                             self.__tag_stats__[tag] += 1
         except Exception as e:
-            self.__output__.put({'Exception': str(e)})
+            # self.__output__.put({'Exception': str(e)})
+            import traceback
+            self.__output__.put({'Exception': traceback.format_exc()})
 
     @staticmethod
     def get_ie_list(buff):
@@ -164,8 +166,8 @@ class InformationElementsStats(WigProcess):
         idx = 0
         invalid = 0
         while True:
-            tag = struct.unpack("B", buff[idx])[0]
-            length = struct.unpack("B", buff[idx+1])[0]
+            tag = buff[idx]
+            length = buff[idx+1]
             value = buff[idx+2:idx+2+length]
             if length == 0 or length > len(value):
                 invalid += 1

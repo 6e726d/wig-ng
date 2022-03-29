@@ -183,8 +183,8 @@ class P2PInformationElement(object):
     def get_capability_attribute_string(data):
         """Returns a string with the P2P device and group capabilities."""
         result = OrderedDict()
-        dev_cap = ord(data[0])
-        grp_cap = ord(data[1])
+        dev_cap = data[0]
+        grp_cap = data[1]
         dev_cap_lst = list()
         grp_cap_lst = list()
         # Device Capabilities

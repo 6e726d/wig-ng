@@ -33,7 +33,7 @@ from multiprocessing import Array as mpArray
 from helpers import ieee80211
 from helpers import p2p
 from helpers import wps
-from helpers.network import interfaces
+#from helpers.network import interfaces
 from helpers.output import writer
 from helpers.Processes import WigProcess
 
@@ -48,7 +48,7 @@ class WiFiDirect(WigProcess):
 
     __module_name__ = "P2P (Wi-Fi Direct)"
 
-    WIFI_DIRECT_SSID = "DIRECT-"
+    WIFI_DIRECT_SSID = b"DIRECT-"
 
     def __init__(self, frames_queue, output_queue, injection_queue=None):
         WigProcess.__init__(self)
@@ -187,70 +187,70 @@ class WiFiDirectTransmitter(WigProcess):
     def __init__(self, queue):
         WigProcess.__init__(self)
         self.__queue__ = queue
-        self.mac_address = "\x00\x00\xde\xad\xbe\xef"
+        self.mac_address = b"\x00\x00\xde\xad\xbe\xef"
         self.channel = 1
         # self.channel = interface.get_interface_channel(self.iface)
 
     def get_radiotap_header(self):
         """Returns a radiotap header buffer for frame injection."""
-        buff = str()
-        buff += "\x00\x00"  # Version
-        buff += "\x0b\x00"  # Header length
-        buff += "\x04\x0c\x00\x00"  # Bitmap
-        buff += "\x6c"  # Rate
-        buff += "\x0c"  # TX Power
-        buff += "\x01"  # Antenna
+        buff = bytes()
+        buff += b"\x00\x00"  # Version
+        buff += b"\x0b\x00"  # Header length
+        buff += b"\x04\x0c\x00\x00"  # Bitmap
+        buff += b"\x6c"  # Rate
+        buff += b"\x0c"  # TX Power
+        buff += b"\x01"  # Antenna
         return buff
 
     def get_wifi_direct_probe_request_frame(self, seq):
         """Returns management probe request frame header."""
-        buff = str()
+        buff = bytes()
         buff += self.get_radiotap_header()
-        buff += "\x40\x00"  # Frame Control - Management - Probe Request
-        buff += "\x00\x00"  # Duration
-        buff += "\xff\xff\xff\xff\xff\xff"  # Destination Address- Broadcast
+        buff += b"\x40\x00"  # Frame Control - Management - Probe Request
+        buff += b"\x00\x00"  # Duration
+        buff += b"\xff\xff\xff\xff\xff\xff"  # Destination Address- Broadcast
         buff += self.mac_address  # Source Address
-        buff += "\xff\xff\xff\xff\xff\xff"  # BSSID Address - Broadcast
+        buff += b"\xff\xff\xff\xff\xff\xff"  # BSSID Address - Broadcast
         # buffer += "\x00\x00"  # Sequence Control
-        buff += "\x00" + struct.pack("B", seq)[0]  # Sequence Control
+        buff += b"\x00" + struct.pack("B", seq)  # Sequence Control
         # SSID IE
-        buff += "\x00"
-        buff += "\x07"
+        buff += b"\x00"
+        buff += b"\x07"
         buff += WiFiDirect.WIFI_DIRECT_SSID
         # Supported Rates IE
-        buff += "\x01"
-        buff += "\x08"
-        buff += "\x0c\x12\x18\x24\x30\x48\x60\x6c"
+        buff += b"\x01"
+        buff += b"\x08"
+        buff += b"\x0c\x12\x18\x24\x30\x48\x60\x6c"
         # DS Parameter Set IE
-        buff += "\x03"
-        buff += "\x01"
-        buff += struct.pack("B", self.channel)[0]
+        buff += b"\x03"
+        buff += b"\x01"
+        buff += struct.pack("B", self.channel)
         # WPS IE
-        buff += "\xdd"
-        buff += "\x6c"
-        buff += "\x00\x50\xf2"
-        buff += "\x04"
-        buff += "\x10\x4a\x00\x01\x10"
-        buff += "\x10\x3a\x00\x01\x01"
-        buff += "\x10\x08\x00\x02\x43\x88"
-        buff += "\x10\x47\x00\x10\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa"
-        buff += "\x10\x54\x00\x08\x00\x0a\x00\x50\xf2\x04\x00\x05"
-        buff += "\x10\x3c\x00\x01\x01"
-        buff += "\x10\x02\x00\x02\x00\x00"
-        buff += "\x10\x09\x00\x02\x00\x00"
-        buff += "\x10\x12\x00\x02\x00\x00"
-        buff += "\x10\x21\x00\x01\x20"
-        buff += "\x10\x23\x00\x01\x20"
-        buff += "\x10\x24\x00\x01\x20"
-        buff += "\x10\x11\x00\x01\x41"
-        buff += "\x10\x49\x00\x09\x00\x37\x2a\x00\x01\x20\x03\x01\x01"
+        buff += b"\xdd"
+        buff += b"\x6c"
+        buff += b"\x00\x50\xf2"
+        buff += b"\x04"
+        buff += b"\x10\x4a\x00\x01\x10"
+        buff += b"\x10\x3a\x00\x01\x01"
+        buff += b"\x10\x08\x00\x02\x43\x88"
+        buff += b"\x10\x47\x00\x10\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa\xfa"
+        buff += b"\x10\x54\x00\x08\x00\x0a\x00\x50\xf2\x04\x00\x05"
+        buff += b"\x10\x3c\x00\x01\x01"
+        buff += b"\x10\x02\x00\x02\x00\x00"
+        buff += b"\x10\x09\x00\x02\x00\x00"
+        buff += b"\x10\x12\x00\x02\x00\x00"
+        buff += b"\x10\x21\x00\x01\x20"
+        buff += b"\x10\x23\x00\x01\x20"
+        buff += b"\x10\x24\x00\x01\x20"
+        buff += b"\x10\x11\x00\x01\x41"
+        buff += b"\x10\x49\x00\x09\x00\x37\x2a\x00\x01\x20\x03\x01\x01"
         # WiFi-Direct IE
-        buff += "\xdd"
-        buff += "\x11"
-        buff += "\x50\x6f\x9a"
-        buff += "\x09"
-        buff += "\x02\x02\x00\x21\x00"
-        buff += "\x06\x05\x00US\x04\x51" + struct.pack("B", self.channel)[0]
+        buff += b"\xdd"
+        buff += b"\x11"
+        buff += b"\x50\x6f\x9a"
+        buff += b"\x09"
+        buff += b"\x02\x02\x00\x21\x00"
+        buff += b"\x06\x05\x00US\x04\x51" + struct.pack("B", self.channel)
         return buff
 
     def run(self):
