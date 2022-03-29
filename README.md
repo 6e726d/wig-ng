@@ -4,6 +4,7 @@ WIG (WiFi Information Gathering) is a free and open source utility for WiFi devi
 ## Requirements
  - pcapy
  - impacket
+ - setproctitle
 
 ### Installation
 
