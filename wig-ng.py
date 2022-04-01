@@ -20,8 +20,6 @@
 
 import os
 import time
-import copy
-import ctypes
 import argparse
 
 from multiprocessing import Queue, Array, TimeoutError

@@ -18,8 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import struct
-
 from queue import Empty
 from multiprocessing import Event
 from collections import OrderedDict

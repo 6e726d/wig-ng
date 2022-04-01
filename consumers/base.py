@@ -19,7 +19,6 @@
 #
 
 import time
-import datetime
 import traceback
 
 import pcapy
