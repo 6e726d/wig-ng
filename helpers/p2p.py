@@ -22,8 +22,8 @@ import struct
 
 from collections import OrderedDict
 
-import consumers.wps
-import helpers.ieee80211
+from helpers import wps
+from helpers import ieee80211
 
 
 class InvalidP2PInformationElement(Exception):
@@ -123,9 +123,9 @@ class P2PInformationElement(object):
     TLV_SIZE_LENGTH = 2
     P2P_IE_SIZE_LENGTH = 1
 
-    VENDOR_SPECIFIC_IE_ID = "\xdd"  # Vendor Specific ID
-    P2P_OUI = "\x50\x6f\x9a"  # WFA specific OUI
-    P2P_OUI_TYPE = "\x09"  # P2P type
+    VENDOR_SPECIFIC_IE_ID = b"\xdd"  # Vendor Specific ID
+    P2P_OUI = b"\x50\x6f\x9a"  # WFA specific OUI
+    P2P_OUI_TYPE = b"\x09"  # P2P type
     FIXED_DATA_LENGTH = len(VENDOR_SPECIFIC_IE_ID) + P2P_IE_SIZE_LENGTH + len(P2P_OUI) + len(P2P_OUI_TYPE)
 
     def __init__(self, buff):
@@ -146,7 +146,7 @@ class P2PInformationElement(object):
         idx = 0
         if self.buffer_length <= self.FIXED_DATA_LENGTH:
             raise InvalidP2PInformationElement("Invalid buffer length.")
-        if not self.buffer[idx] == self.VENDOR_SPECIFIC_IE_ID:
+        if not struct.pack("B", self.buffer[idx]) == self.VENDOR_SPECIFIC_IE_ID:
             raise InvalidP2PInformationElement("Invalid P2P information element id.")
         idx += len(self.VENDOR_SPECIFIC_IE_ID) + self.P2P_IE_SIZE_LENGTH
         if not self.buffer[idx:self.FIXED_DATA_LENGTH] == self.P2P_OUI + self.P2P_OUI_TYPE:
@@ -249,12 +249,12 @@ class P2PInformationElement(object):
         mac_address = ieee80211.get_string_mac_address_from_buffer(data[offset:offset+6])
         offset += 6
         config_methods_raw = data[offset:offset+2]
-        config_methods_str = wps.WPSInformationElement.get_config_methods_string(config_methods_raw)
+        config_methods_str = wps.WPSInformationElement.get_config_methods_string(config_methods_raw).decode("ascii")
         offset += 2
         primary_dev_type_raw = data[offset:offset+8]
-        primary_dev_type_str = wps.WPSInformationElement.get_primary_device_type_string(primary_dev_type_raw)
+        primary_dev_type_str = wps.WPSInformationElement.get_primary_device_type_string(primary_dev_type_raw).decode("ascii")
         offset += 8
-        number_secondary_dev_types = struct.unpack("B", data[offset:offset+1])[0]
+        number_secondary_dev_types = data[offset]
         offset += 1
         # TODO: Process Secondary Device Types List
         for idx in range(number_secondary_dev_types):
@@ -263,7 +263,7 @@ class P2PInformationElement(object):
         offset += 2
         device_name_length = struct.unpack(">H", data[offset:offset + 2])[0]
         offset += 2
-        device_name_str = data[offset:offset+device_name_length]
+        device_name_str = data[offset:offset+device_name_length].decode("ascii")
         result['P2P Device Address'] = mac_address
         result['P2P Config Methods'] = config_methods_str
         result['P2P Primary Device Type'] = primary_dev_type_str
