@@ -15,11 +15,11 @@ WIG (WiFi Information Gathering) is a free and open source utility for WiFi devi
 
 ## Supported Protocols & Standards
 
- - Apple Wireless Direct Link (AWDL)
- - Cisco Client Extension (CCX)
- - HP Printers Custom Information Element
- - Wi-Fi Direct (P2P)
  - WiFi Protected Setup (WPS)
+ - WiFi-Direct (P2P)
+ - Cisco Client Extension (CCX)
+ - Apple Wireless Direct Link (AWDL)
+ - HP Printers Proprietary Information Element
 
 ## Usage
 
