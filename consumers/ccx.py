@@ -18,10 +18,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import time
 import struct
-import string
-import random
+import traceback
 
 from queue import Empty
 from collections import OrderedDict
@@ -106,6 +104,8 @@ class CiscoClientExtensions(WigProcess):
                             self.process_body(frame_control, mgt_frame, data)
                 except Empty:
                     pass
+                except Exception as e:
+                    self.__output__.put({'Exception': traceback.format_exc()})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
@@ -146,12 +146,12 @@ class CiscoClientExtensions(WigProcess):
             data = frame._get_element(ccx.CISCO_CCX_IE_DEVICE_NAME_ID)
             if bssid not in self.__devices__ and data:
                 self.__devices__[bssid] = OrderedDict()
-                ssid = frame.get_ssid().replace("\x00", "")
+                ssid = frame.get_ssid().decode("utf-8").replace("\x00", "")
                 self.__devices__[bssid][self.SSID_KEY] = ssid
                 channel = frame.get_ds_parameter_set()
                 if channel:
                     self.__devices__[bssid][self.CHANNEL_KEY] = channel
-                ccx85 = chr(ccx.CISCO_CCX_IE_DEVICE_NAME_ID) + chr(len(data)) + data
+                ccx85 = struct.pack("B", ccx.CISCO_CCX_IE_DEVICE_NAME_ID) + struct.pack("B", len(data)) + data
                 device_name = ccx.CiscoCCX85InformationElement(ccx85).get_device_name()
                 associated_clients = ccx.CiscoCCX85InformationElement(ccx85).get_associated_clients()
                 self.__devices__[bssid][self.AP_NAME_KEY] = device_name

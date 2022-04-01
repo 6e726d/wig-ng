@@ -18,7 +18,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-import struct
 import socket
 
 
@@ -56,8 +55,8 @@ class CiscoCCX85InformationElement(object):
 
     def __do_basic_verification__(self):
         """Verify if the buffer has the minimal length necessary."""
-        tlv_id = struct.unpack("B", self.buffer[0])[0]
-        tlv_size = struct.unpack("B", self.buffer[1])[0]
+        tlv_id = self.buffer[0]
+        tlv_size = self.buffer[1]
         if not tlv_id == CISCO_CCX_IE_DEVICE_NAME_ID:
             raise InvalidCCXInformationElement()
         if tlv_size < self.ASSOCIATED_CLIENTS_OFFSET or self.buffer_length < self.ASSOCIATED_CLIENTS_OFFSET:
@@ -66,8 +65,8 @@ class CiscoCCX85InformationElement(object):
     def __process_buffer__(self):
         """Process data buffer and get device name and associated clients."""
         aux_buff = self.buffer[self.DEVICE_NAME_OFFSET:self.DEVICE_NAME_OFFSET+self.DEVICE_NAME_VALUE_SIZE]
-        self.__device_name__ = struct.unpack("16s", aux_buff)[0].replace("\x00", "")
-        self.__associated_clients__ = struct.unpack("B", self.buffer[self.ASSOCIATED_CLIENTS_OFFSET])[0]
+        self.__device_name__ = aux_buff.decode("utf-8").replace("\x00", "")
+        self.__associated_clients__ = self.buffer[self.ASSOCIATED_CLIENTS_OFFSET]
 
 
 class CiscoCCX95InformationElement(object):
@@ -90,8 +89,8 @@ class CiscoCCX95InformationElement(object):
 
     def __do_basic_verification__(self):
         """Verify if the buffer has the minimal length necessary."""
-        tlv_id = struct.unpack("B", self.buffer[0])[0]
-        tlv_size = struct.unpack("B", self.buffer[1])[0]
+        tlv_id = self.buffer[0]
+        tlv_size = self.buffer[1]
         if not tlv_id == CISCO_CCX_IE_IP_ADDRESS_ID:
             raise InvalidCCXInformationElement()
         if tlv_size < self.TLV_MIN_SIZE:
