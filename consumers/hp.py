@@ -19,6 +19,7 @@
 #
 
 import struct
+import traceback
 
 from queue import Empty
 from multiprocessing import Event
@@ -123,9 +124,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                 except Empty:
                     pass
                 except Exception as e:
-                    # self.__output__.put({"Exception": str(e)})
-                    import traceback
-                    self.__output_.put({'Exception': traceback.format_exc()})
+                    self.__output__.put({'Exception': traceback.format_exc()})
         # Ignore SIGINT signal, this is handled by parent.
         except KeyboardInterrupt:
             pass
@@ -134,8 +133,8 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
         """Process HP wireless printers information element."""
         index = 0
         while index < len(data):
-            tag_id = struct.unpack("B", data[index])[0]
-            tag_length = struct.unpack("B", data[index + 1])[0]
+            tag_id = data[index]
+            tag_length = data[index + 1]
             index += 2
 
             if tag_length > len(data) - index:
@@ -170,20 +169,20 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
             elif tag_id == self.HP_TLV_TYPES['AWC Version']:
                 if tag_length != 2:
                     continue
-                awc_major = struct.unpack("B", data[index])[0]
-                awc_minor = struct.unpack("B", data[index + 1])[0]
+                awc_major = data[index]
+                awc_minor = data[index + 1]
                 info_dict['AWC version'] = "%d.%d" % (awc_major, awc_minor)
                 index += 2
             elif tag_id == self.HP_TLV_TYPES['Model Name String']:
-                model_name = str(data[index:index+tag_length])
+                model_name = data[index:index+tag_length].decode("ascii")
                 index += tag_length
                 info_dict['Model Name'] = model_name.replace("\x00", "")
             elif tag_id == self.HP_TLV_TYPES['Product SKU']:
-                product_sku = str(data[index:index + tag_length])
+                product_sku = data[index:index + tag_length].decode("ascii")
                 index += tag_length
                 info_dict['Product SKU'] = product_sku.replace("\x00", "")
             elif tag_id == self.HP_TLV_TYPES['Device Serial Number']:
-                serial_number = str(data[index:index + tag_length])
+                serial_number = data[index:index + tag_length].decode("ascii")
                 index += tag_length
                 info_dict['Serial Number'] = serial_number.replace("\x00", "")
             elif tag_id == self.HP_TLV_TYPES['Device UUID']:
@@ -230,7 +229,7 @@ class HewlettPackardVendorSpecificTypeZero(WigProcess):
                     if oui == self.hp_ie_oui:
                         ie_data = item[1]
                         info_items = OrderedDict()
-                        info_items['SSID'] = ssid
+                        info_items['SSID'] = ssid.decode("utf-8")
                         info_items['Channel'] = channel
                         info_items['Security'] = security
                         self.process_hp_ie(ie_data, info_items)
