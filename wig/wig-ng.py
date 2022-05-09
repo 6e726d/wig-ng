@@ -25,14 +25,14 @@ import argparse
 from multiprocessing import Queue, Array, TimeoutError
 from multiprocessing import Array as mpArray
 
-from consumers.base import Mediator
-from consumers.base import FrameInjectionManager
-from consumers.base import OutputManager
-from producers.base import LiveNetworkCapture
-from producers.base import OfflineNetworkCapture
+from wig.consumers.base import Mediator
+from wig.consumers.base import FrameInjectionManager
+from wig.consumers.base import OutputManager
+from wig.producers.base import LiveNetworkCapture
+from wig.producers.base import OfflineNetworkCapture
 
-from helpers.network import interfaces
-from helpers.output import writer
+from wig.helpers.network import interfaces
+from wig.helpers.output import writer
 
 import pcapy
 

@@ -22,8 +22,8 @@ import struct
 
 from collections import OrderedDict
 
-from helpers import wps
-from helpers import ieee80211
+from wig.helpers import wps
+from wig.helpers import ieee80211
 
 
 class InvalidP2PInformationElement(Exception):

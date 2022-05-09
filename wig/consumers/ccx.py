@@ -25,10 +25,10 @@ from queue import Empty
 from collections import OrderedDict
 from multiprocessing import Event
 
-from helpers import ieee80211
-from helpers import ccx
-from helpers.output import writer
-from helpers.Processes import WigProcess
+from wig.helpers import ieee80211
+from wig.helpers import ccx
+from wig.helpers.output import writer
+from wig.helpers.Processes import WigProcess
 
 from impacket import ImpactDecoder
 from impacket import dot11

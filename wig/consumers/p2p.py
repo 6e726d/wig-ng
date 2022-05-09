@@ -30,11 +30,11 @@ from collections import OrderedDict
 from multiprocessing import Event
 from multiprocessing import Array as mpArray
 
-from helpers import ieee80211
-from helpers import p2p
-from helpers import wps
-from helpers.output import writer
-from helpers.Processes import WigProcess
+from wig.helpers import ieee80211
+from wig.helpers import p2p
+from wig.helpers import wps
+from wig.helpers.output import writer
+from wig.helpers.Processes import WigProcess
 
 from impacket import ImpactDecoder
 from impacket import dot11

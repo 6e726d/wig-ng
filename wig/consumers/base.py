@@ -28,18 +28,18 @@ from collections import OrderedDict
 
 from multiprocessing import Event, Queue, TimeoutError
 
-from helpers import ieee80211
-from helpers.network import interfaces
-from helpers.output import writer
-from helpers.Processes import WigProcess
-from producers.base import FINITE_TYPE, INFINITE_TYPE
+from wig.helpers import ieee80211
+from wig.helpers.network import interfaces
+from wig.helpers.output import writer
+from wig.helpers.Processes import WigProcess
+from wig.producers.base import FINITE_TYPE, INFINITE_TYPE
 
-from .wps import WiFiProtectedSetup
-from .uncommon import InformationElementsStats
-from .hp import HewlettPackardVendorSpecificTypeZero
-from .awdl import AppleWirelessDirectLink
-from .p2p import WiFiDirect
-from .ccx import CiscoClientExtensions
+from wig.consumers.wps import WiFiProtectedSetup
+from wig.consumers.uncommon import InformationElementsStats
+from wig.consumers.hp import HewlettPackardVendorSpecificTypeZero
+from wig.consumers.awdl import AppleWirelessDirectLink
+from wig.consumers.p2p import WiFiDirect
+from wig.consumers.ccx import CiscoClientExtensions
 
 
 class Mediator(WigProcess):

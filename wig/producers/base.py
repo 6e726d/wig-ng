@@ -22,9 +22,9 @@ from multiprocessing import Event
 
 import pcapy
 
-from helpers import radiotap
-from helpers.network import interfaces
-from helpers.Processes import WigProcess
+from wig.helpers import radiotap
+from wig.helpers.network import interfaces
+from wig.helpers.Processes import WigProcess
 
 # Link-Layer Headre Types
 # https://www.tcpdump.org/linktypes.html
