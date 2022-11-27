@@ -156,8 +156,9 @@ class WiFiDirect(WigProcess):
                     ie = p2p.P2PInformationElement(raw_data)
                     for p2p_element in ie.get_elements():
                         k, v = p2p_element
-                        if all(c in string.printable for c in v):
-                            p2p_ie_info[k] = v
+                        if isinstance(v, str):
+                            if all(c in string.printable for c in v):
+                                p2p_ie_info[k] = v
                         else:
                             p2p_ie_info[k] = repr(v)
 
