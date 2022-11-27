@@ -23,8 +23,6 @@ import struct
 import string
 import traceback
 
-import pcapy
-
 from queue import Empty
 from collections import OrderedDict
 from multiprocessing import Event
