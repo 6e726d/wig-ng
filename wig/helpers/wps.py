@@ -239,7 +239,7 @@ class WPSInformationElement(object):
     @staticmethod
     def get_primary_device_type_string(data):
         """Returns a string with the WPS primary device type based on the data parameter."""
-        primary_device_type = str()
+        primary_device_type = bytes()
         category = struct.unpack("!H", data[:2])[0]
         # subcategory = struct.unpack("!H", data[6:8])[0]
         if category == 1:
