@@ -34,7 +34,7 @@ from wig.producers.base import OfflineNetworkCapture
 from wig.helpers.network import interfaces
 from wig.helpers.output import writer
 
-import pcapy
+import pcapyplus
 
 
 APP_NAME = "Wig-ng"
@@ -69,7 +69,7 @@ def check_input_pcap_capture_files(files_list):
         if not os.path.isfile(file):
             print("Error: %s is not a file." % file)
             raise Exception("PCAP Capture File Error.")
-        pd = pcapy.open_offline(file)
+        pd = pcapyplus.open_offline(file)
         datalink = pd.datalink()
         if datalink not in [interfaces.DLT_IEEE802_11,
                             interfaces.DLT_IEEE802_11_RADIO]:

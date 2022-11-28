@@ -20,7 +20,7 @@
 
 from multiprocessing import Event
 
-import pcapy
+import pcapyplus
 
 from wig.helpers import radiotap
 from wig.helpers.network import interfaces
@@ -63,10 +63,10 @@ class LiveNetworkCapture(WigProcess):
         """
         This method opens the network interface and sets the BPF filter. 
         """
-        self.__pd__ = pcapy.open_live(self.__network_interface__,
-                                      self.SNAPLEN,
-                                      self.PROMISC,
-                                      self.TIMEOUT)
+        self.__pd__ = pcapyplus.open_live(self.__network_interface__,
+                                          self.SNAPLEN,
+                                          self.PROMISC,
+                                          self.TIMEOUT)
         if self.__filter__:
             self.__pd__.setfilter(self.__filter__)
 
@@ -133,7 +133,7 @@ class OfflineNetworkCapture(WigProcess):
         """
         This method opens the pcap network capture file and sets the BPF filter. 
         """
-        self.__pd__ = pcapy.open_offline(self.__pcap_filename__)
+        self.__pd__ = pcapyplus.open_offline(self.__pcap_filename__)
         if self.__filter__:
             self.__pd__.setfilter(self.__filter__)
 

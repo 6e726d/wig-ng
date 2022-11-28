@@ -45,7 +45,7 @@ setup(name=PACKAGE_NAME,
                 'wig.helpers.network',
                 'wig.helpers.output'],
       scripts=glob.glob(os.path.join('wig', 'wig-ng.py')),
-      install_requires=['pcapy', 'impacket', 'setproctitle'],
+      install_requires=['pcapyplus', 'impacket', 'setproctitle'],
       classifiers=[
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3',

@@ -21,7 +21,7 @@
 import time
 import traceback
 
-import pcapy
+import pcapyplus
 
 from queue import Empty
 from collections import OrderedDict
@@ -282,10 +282,10 @@ class FrameInjectionManager(WigProcess):
 
         self.__pds__ = list()
         for iface in self.__ifaces__:
-            self.__pds__.append(pcapy.open_live(iface,
-                                                interfaces.PCAP_SNAPLEN,
-                                                interfaces.PCAP_PROMISC,
-                                                interfaces.PCAP_TIMEOUT))
+            self.__pds__.append(pcapyplus.open_live(iface,
+                                                    interfaces.PCAP_SNAPLEN,
+                                                    interfaces.PCAP_PROMISC,
+                                                    interfaces.PCAP_TIMEOUT))
 
         while not self.__stop__.is_set():
             try:
