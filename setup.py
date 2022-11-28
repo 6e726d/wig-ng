@@ -27,7 +27,7 @@ from distutils.core import setup
 PACKAGE_NAME = 'wig-ng'
 
 VERSION_MAJOR = 0
-VERSION_MINOR = 1
+VERSION_MINOR = 2
 
 setup(name=PACKAGE_NAME,
       version='{}.{}'.format(VERSION_MAJOR, VERSION_MINOR),
@@ -50,5 +50,5 @@ setup(name=PACKAGE_NAME,
         'Development Status :: 4 - Beta',
         'Programming Language :: Python :: 3',
         ],
-      download_url="https://github.com/6e726d/wig-ng/archive/refs/tags/0.1.tar.gz"
+      download_url="https://github.com/6e726d/wig-ng/archive/refs/tags/0.2.tar.gz"
 )
